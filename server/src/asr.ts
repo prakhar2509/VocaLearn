@@ -1,5 +1,6 @@
 import { createClient, LiveTranscriptionEvents } from '@deepgram/sdk';
 import { config } from './config';
+import { getSupportedLanguageCodes } from './languages';
 
 interface Transcription {
   text: string;
@@ -12,7 +13,7 @@ export const processAudioStream = async (audioChunks: Buffer[], language: string
     throw new Error('Invalid or empty audio data');
   }
 
-  if (!language || !supportedLanguages.includes(language)) {
+  if (!language || !getSupportedLanguageCodes().includes(language)) {
   throw new Error(`Unsupported language: ${language}`);
 }
 
