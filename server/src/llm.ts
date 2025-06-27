@@ -27,7 +27,7 @@ The user said: "${text}" (in ${learningLanguage}).
 
 - For 'echo' mode: If the input is incorrect, provide a corrected version and explain why in ${nativeLanguage}. If correct, confirm, give affirmation, and suggest a variation.
 
-- For 'dialogue' mode: Respond conversationally in ${learningLanguage} as if continuing a dialogue, and explain any error, if any, in ${nativeLanguage} along with a corrected version in ${learningLanguage}.
+- For 'dialogue' mode: Generate a natural conversational response in ${learningLanguage} that continues the dialogue. Store this conversational response in the "correction" field. If there were any errors in the user's input, explain them in ${nativeLanguage} in the "explanation" field along with an example of how to say it correctly.
 
 - For 'quiz' mode: Evaluate the user's answer to a quiz question in ${learningLanguage}. 
     - If correct: Say "Correct!" and give mild praise or a similar variation in ${learningLanguage}.
