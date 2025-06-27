@@ -57,18 +57,13 @@ export default function Home() {
     if (isMounted && isVisible) {
       const triggerAnimations = () => {
         const sections = document.querySelectorAll("[data-animate]");
-        console.log(`Found ${sections.length} sections with data-animate`);
 
-        sections.forEach((section, index) => {
+        sections.forEach((section) => {
           const rect = section.getBoundingClientRect();
           const isInView = rect.top < window.innerHeight * 0.75;
-          console.log(
-            `Section ${index}: top=${rect.top}, isInView=${isInView}`
-          );
 
           if (isInView) {
             section.classList.add("animate-in");
-            console.log(`Added animate-in to section ${index}`);
           }
         });
       };
