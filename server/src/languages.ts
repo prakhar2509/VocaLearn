@@ -5,6 +5,7 @@ export const supportedLanguages = [
   { code: 'hi-IN', name: 'Hindi (India)', voiceId: 'hi-IN-rahul' },
   { code: 'jp-JP', name: 'Japenese(Japan)', voiceId: 'jp-JP-kenji'},
   { code: 'it-IT', name: 'Italian(Italy)', voiceId: 'it-IT-vincenzo'},
+  { code: 'de-DE', name: 'German (Germany)', voiceId: 'de-DE-lia' },
 ];
 
 export function getVoiceId(language: string): string {

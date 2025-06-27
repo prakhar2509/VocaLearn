@@ -10,7 +10,7 @@ export const generateAndSendTTS = async (
   text: string,
   language: string,
   label: "correction" | "explanation" = "correction"
-): Promise<void> => {
+): Promise<string> => {
   try {
     const voice_Id = getVoiceId(language)
     const data1 = {
@@ -45,13 +45,15 @@ export const generateAndSendTTS = async (
     clientSocket.send(
       JSON.stringify({
         type: "audio",
-        audioUrl: audioFile, // ✅ Send audio URL instead of base64
+        audioUrl: audioFile, 
         label,
         isFinal: true,
       })
     );
+    return audioFile;
   } catch (err: any) {
     console.error("❌ Murf HTTP TTS failed:", err.message);
     clientSocket.send(JSON.stringify({ error: `TTS Error: ${err.message}` }));
+    return "";
   }
 };

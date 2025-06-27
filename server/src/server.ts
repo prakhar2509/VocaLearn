@@ -38,60 +38,87 @@ wss.on("connection", (ws, req) => {
     mode,
   });
 
-  ws.on("message", async (data: Buffer) => {
-    try {
-      if (data.length === 0) {
-        ws.send(JSON.stringify({ error: "Empty audio data" }));
-        return;
-      }
+  const timeoutId = setTimeout(() => {
+    if (sessions.has(ws)) {
+      console.log('WebSocket connection timed out');
+      ws.send(JSON.stringify({ error: 'Connection timed out' }));
+      ws.close();
+    }
+  }, 30000); 
 
+  ws.on("message", async (data: Buffer) => {
+    
+    try {
       const session = sessions.get(ws);
       if (!session) {
         ws.send(JSON.stringify({ error: "Session not found" }));
         return;
       }
 
-      session.audioChunks.push(data);
 
-      const transcription = await processAudioStream(
-        session.audioChunks,
-        session.learningLanguage
-      );
-      ws.send(
-        JSON.stringify({
-          transcription: transcription.text,
-          Language: session.learningLanguage,
-        })
-      );
+      if (data.toString().startsWith("{")) {
+        const message = JSON.parse(data.toString());
+        if (message.end === true) {
+          const transcription = await processAudioStream(
+            session.audioChunks,
+            session.learningLanguage
+          );
+            console.log("✅ Transcription:", transcription.text);
+          clearTimeout(timeoutId)
+          ws.send(
+            JSON.stringify({
+              transcription: transcription.text,
+              language: session.learningLanguage,
+            })
+          );
+          
+          const response = await generateResponse(
+            transcription.text,
+            session.learningLanguage,
+            session.nativeLanguage,
+            session.mode
+          );
+            console.log("✅ Response:", response);
+          ws.send(
+            JSON.stringify({
+              correction: response.correction,
+              explanation: response.explanation,
+              correctionLanguage: session.learningLanguage,
+              explanationLanguage: session.nativeLanguage,
+            })
+          );
 
-      const response = await generateResponse(
-        transcription.text,
-        session.learningLanguage,
-        session.nativeLanguage,
-        session.mode
-      );
-      ws.send(
-        JSON.stringify({
-          correction: response.correction,
-          explanation: response.explanation,
-          correctionLanguage: session.learningLanguage,
-          explanationLanguage: session.nativeLanguage,
-        })
-      );
+          const correctionAudio = await generateAndSendTTS(
+            ws,
+            response.correction,
+            session.learningLanguage,
+            "correction"
+          );
+          const explanationAudio = await generateAndSendTTS(
+            ws,
+            response.explanation,
+            session.nativeLanguage,
+            "explanation"
+          );
 
-      await generateAndSendTTS(
-        ws,
-        response.correction,
-        session.learningLanguage,
-        "correction"
-      );
-      await generateAndSendTTS(
-        ws,
-        response.explanation,
-        session.nativeLanguage,
-        "explanation"
-      );
-      session.audioChunks = [];
+          ws.send(
+            JSON.stringify({
+              type: "done",
+              done : true,
+               audioCorrectionUrl: correctionAudio,
+               audioExplanationUrl: explanationAudio,
+            })
+          )
+
+          session.audioChunks = []; 
+        }
+      } else {
+        if (data.length > 0) {
+          session.audioChunks.push(data);
+        } else {
+          ws.send(JSON.stringify({ error: "Empty audio data" }));
+        }
+      }
     } catch (error) {
       ws.send(
         JSON.stringify({
@@ -102,6 +129,7 @@ wss.on("connection", (ws, req) => {
   });
 
   ws.on("close", () => {
+    clearTimeout(timeoutId)
     sessions.delete(ws);
     console.log("Client Disconnected");
   });
