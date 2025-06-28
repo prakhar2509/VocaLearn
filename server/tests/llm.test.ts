@@ -1,4 +1,4 @@
-import { generateResponse } from "../src/llm";
+import { generateResponse } from "../src/services/llm";
 
 jest.setTimeout(20000);
 

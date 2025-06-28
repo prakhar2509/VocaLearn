@@ -2,7 +2,8 @@
 
 import { WebSocket } from "ws";
 import { processAudioStream } from "../asr";
-import { generateResponse } from "../llm";
+import { generateResponse } from "../services/llm";
+import { calculateAccuracy } from "./llm/accuracy";
 import { generateAndSendTTS } from "../murf";
 import { handleQuizAnswer } from "../quiz";
 import { ClientSession, sessions, clearAudioChunks } from "../managers/session-manager";
@@ -28,12 +29,6 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
   );
   console.log("✅ Transcription:", transcription.text);
   
-  // Send transcription to client
-  ws.send(JSON.stringify({
-    transcription: transcription.text,
-    language: session.learningLanguage,
-  }));
-  
   // Generate LLM response
   const response = await generateResponse(
     transcription.text,
@@ -42,6 +37,39 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     session.mode
   );
   console.log("✅ Response:", response);
+  
+  // Calculate accuracy for the user's speech
+  let accuracyResult;
+  if (session.mode === "echo") {
+    // In echo mode, compare against the correction to see how well they matched the expected output
+    accuracyResult = await calculateAccuracy(
+      transcription.text,
+      response.correction, // Compare against the corrected version
+      session.learningLanguage,
+      "echo"
+    );
+  } else {
+    // In dialogue mode, evaluate speech quality without comparing to a specific expected text
+    accuracyResult = await calculateAccuracy(
+      transcription.text,
+      transcription.text, // Self-evaluation for dialogue mode
+      session.learningLanguage,
+      "dialogue"
+    );
+  }
+  console.log("📊 Accuracy:", accuracyResult);
+  
+  // Send transcription and accuracy to client
+  ws.send(JSON.stringify({
+    transcription: transcription.text,
+    language: session.learningLanguage,
+    // Accuracy data
+    accuracy: accuracyResult.accuracy,
+    pronunciationScore: accuracyResult.pronunciationScore,
+    grammarScore: accuracyResult.grammarScore,
+    fluencyScore: accuracyResult.fluencyScore,
+    accuracyFeedback: accuracyResult.feedback
+  }));
   
   // Send text response
   ws.send(JSON.stringify({

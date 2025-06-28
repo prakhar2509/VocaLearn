@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { generateResponse } from "../llm";
+import { generateResponse } from "../services/llm";
 import { generateAndSendTTS } from "../murf";
 import { ClientSession } from "./types";
 

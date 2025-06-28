@@ -1,7 +1,7 @@
 // tests/murf.test.ts
 import WebSocket from "ws";
 import { generateAndSendTTS } from "../src/murf";
-import { config } from "../src/config";
+import { config } from "../src/utils/config";
 
 config.murfApiKey = process.env.MURF_API_KEY || "your-api-key";
 

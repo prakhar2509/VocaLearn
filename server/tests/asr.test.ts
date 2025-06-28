@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { processAudioStream , supportedLanguages} from '../src/asr';
-
+import { processAudioStream} from '../src/asr';
+import { supportedLanguages } from '../src/utils/languages';
 
 
 

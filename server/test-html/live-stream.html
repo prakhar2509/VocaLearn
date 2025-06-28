@@ -40,6 +40,8 @@
         <option value="ja-JP">Japanese</option>
         <option value="it-IT">Italian</option>
         <option value="de-DE">German</option>
+        <option value="nl-NL">Dutch</option>
+        <option value="pt-BR">Portuguese</option>
       </select>
       
       <label for="nativeLang">Native Language:</label>
@@ -51,6 +53,8 @@
         <option value="ja-JP">Japanese</option>
         <option value="it-IT">Italian</option>
         <option value="de-DE">German</option>
+        <option value="nl-NL">Dutch</option>
+        <option value="pt-BR">Portuguese</option>
       </select>
       
       <label for="mode">Mode:</label>
@@ -72,6 +76,32 @@
 
     <h2>📚 Explanation:</h2>
     <p id="explanation">–</p>
+
+    <!-- Accuracy Display -->
+    <div id="accuracySection" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+      <h2>📊 Speech Accuracy</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
+        <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+          <strong>Overall</strong><br>
+          <span id="accuracyScore" style="font-size: 24px; color: #007bff;">-</span>%
+        </div>
+        <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+          <strong>Pronunciation</strong><br>
+          <span id="pronunciationScore" style="font-size: 24px; color: #28a745;">-</span>%
+        </div>
+        <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+          <strong>Grammar</strong><br>
+          <span id="grammarScore" style="font-size: 24px; color: #ffc107;">-</span>%
+        </div>
+        <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+          <strong>Fluency</strong><br>
+          <span id="fluencyScore" style="font-size: 24px; color: #17a2b8;">-</span>%
+        </div>
+      </div>
+      <div style="background: white; padding: 10px; border-radius: 5px;">
+        <strong>📝 Feedback:</strong> <span id="accuracyFeedback">-</span>
+      </div>
+    </div>
 
     <script type="module">
       const startBtn = document.getElementById("start");
@@ -166,6 +196,31 @@
           if (data.transcription) {
             document.getElementById("transcription").textContent =
               data.transcription;
+          }
+
+          // Handle accuracy data
+          if (data.accuracy !== undefined) {
+            document.getElementById("accuracyScore").textContent = Math.round(data.accuracy);
+            document.getElementById("pronunciationScore").textContent = Math.round(data.pronunciationScore || 0);
+            document.getElementById("grammarScore").textContent = Math.round(data.grammarScore || 0);
+            document.getElementById("fluencyScore").textContent = Math.round(data.fluencyScore || 0);
+            document.getElementById("accuracyFeedback").textContent = data.accuracyFeedback || "No feedback available";
+            
+            // Show the accuracy section
+            document.getElementById("accuracySection").style.display = 'block';
+            
+            // Color-code the scores
+            const updateScoreColor = (elementId, score) => {
+              const element = document.getElementById(elementId);
+              if (score >= 80) element.style.color = '#28a745'; // Green
+              else if (score >= 60) element.style.color = '#ffc107'; // Yellow
+              else element.style.color = '#dc3545'; // Red
+            };
+            
+            updateScoreColor('accuracyScore', data.accuracy);
+            updateScoreColor('pronunciationScore', data.pronunciationScore);
+            updateScoreColor('grammarScore', data.grammarScore);
+            updateScoreColor('fluencyScore', data.fluencyScore);
           }
 
           if (data.correction) {

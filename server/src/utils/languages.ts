@@ -6,6 +6,8 @@ export const supportedLanguages = [
   { code: 'ja-JP', name: 'Japanese (Japan)', voiceId: 'jp-JP-kenji'},
   { code: 'it-IT', name: 'Italian (Italy)', voiceId: 'it-IT-vincenzo'},
   { code: 'de-DE', name: 'German (Germany)', voiceId: 'de-DE-lia' },
+  {code : 'nl-NL', name : 'Dutch(Netherlands)', voiceId : 'nl-NL-dirk'},
+  {code : 'pt-BR', name: 'Portugese(Brazil)', voiceId : 'pt-BR-isadora'}
 ];
 
 export function getVoiceId(language: string): string {
