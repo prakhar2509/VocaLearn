@@ -16,8 +16,10 @@ export const generateScenarioGreeting = async (
     throw new Error(`Scenario not found: ${scenarioId}`);
   }
 
-  const startingPrompt = scenario.startingPrompts[learningLanguage] || scenario.startingPrompts['en-US'];
-  
+  const startingPrompt =
+    scenario.startingPrompts[learningLanguage] ||
+    scenario.startingPrompts["en-US"];
+
   return {
     correction: startingPrompt,
     explanation: "", // No explanation needed for initial greeting
@@ -33,15 +35,19 @@ export const generateResponse = async (
   nativeLanguage: string,
   mode: string,
   scenarioId?: string,
-  conversationHistory?: Array<{role: 'user' | 'assistant'; content: string; timestamp: number}>
+  conversationHistory?: Array<{
+    role: "user" | "assistant";
+    content: string;
+    timestamp: number;
+  }>
 ): Promise<LLMResponse> => {
   if (!["echo", "dialogue", "quiz"].includes(mode)) {
     throw new Error(`Invalid Mode : ${mode}`);
   }
 
   // Get scenario context if provided
-  let scenarioContext = '';
-  if (scenarioId && mode === 'dialogue') {
+  let scenarioContext = "";
+  if (scenarioId && mode === "dialogue") {
     const scenario = getScenarioById(scenarioId);
     if (scenario) {
       scenarioContext = `
@@ -53,28 +59,35 @@ Scenario: ${scenario.title} - ${scenario.description}
   }
 
   // Build conversation history context
-  let conversationContext = '';
-  if (conversationHistory && conversationHistory.length > 0 && mode === 'dialogue') {
+  let conversationContext = "";
+  if (
+    conversationHistory &&
+    conversationHistory.length > 0 &&
+    mode === "dialogue"
+  ) {
     // Sort by timestamp to ensure correct order
-    const sortedHistory = conversationHistory.sort((a, b) => a.timestamp - b.timestamp);
-    
-    conversationContext = '\n\nCONVERSATION HISTORY (maintain context and continuity):\n';
-    
+    const sortedHistory = conversationHistory.sort(
+      (a, b) => a.timestamp - b.timestamp
+    );
+
+    conversationContext =
+      "\n\nCONVERSATION HISTORY (maintain context and continuity):\n";
+
     // Show more recent messages with more detail, older ones summarized
     const recentMessages = sortedHistory.slice(-8); // Last 8 messages (4 exchanges)
     const olderMessages = sortedHistory.slice(0, -8);
-    
+
     // Summarize older part if it exists
     if (olderMessages.length > 0) {
       conversationContext += `[Earlier conversation context: We discussed various topics and have been chatting naturally]\n`;
     }
-    
+
     // Show recent messages in detail
     recentMessages.forEach((message, index) => {
-      const role = message.role === 'user' ? 'User' : 'You (AI)';
+      const role = message.role === "user" ? "User" : "You (AI)";
       conversationContext += `${role}: ${message.content}\n`;
     });
-    
+
     conversationContext += `\nCURRENT MESSAGE: User just said: "${text}"\n`;
     conversationContext += `CRITICAL CONTEXT INSTRUCTIONS:\n`;
     conversationContext += `- You are continuing an ongoing conversation - NOT starting fresh!\n`;
@@ -105,7 +118,7 @@ IMPORTANT LANGUAGE RULES:
 - For 'echo' mode: 
     • If the input is incorrect, provide ONLY the corrected version in ${learningLanguage} in the "correction" field - no additional text, affirmations, or suggestions. 
     • If correct, leave the "correction" field empty or put the original text. 
-    • Put comprehensive, educational explanations in the "explanation" field (in ${nativeLanguage}):
+    • Put comprehensive, educational explanations in the "explanation" field (in ${nativeLanguage}) BUT KEEP THEM CONCISE:
       - Start with WHY the correction was needed (specific grammar rules, pronunciation patterns, cultural context)
       - Provide the underlying linguistic principle or rule being applied
       - Give 2-3 concrete examples of correct usage in different contexts
@@ -128,7 +141,11 @@ IMPORTANT LANGUAGE RULES:
     • Keep all feedback encouraging but substantive and actionable
 
 - For 'dialogue' mode: Generate a natural conversational response in ${learningLanguage} that continues the dialogue.
-    ${scenarioContext ? 'SCENARIO MODE: You are role-playing in this scenario. Stay completely in character and respond as the role described in the scenario context. Make the conversation immersive and realistic. Keep the conversation flowing naturally - share information about yourself, react to what the user said, make comments, and sometimes ask follow-up questions.' : ''}
+    ${
+      scenarioContext
+        ? "SCENARIO MODE: You are role-playing in this scenario. Stay completely in character and respond as the role described in the scenario context. Make the conversation immersive and realistic. Keep the conversation flowing naturally - share information about yourself, react to what the user said, make comments, and sometimes ask follow-up questions."
+        : ""
+    }
     
     CRITICAL DIALOGUE RULES:
     • You are NOT a language tutor - you are having a REAL conversation as the character in the scenario!
@@ -161,7 +178,11 @@ IMPORTANT LANGUAGE RULES:
       - Keep explanations highly educational and supportive, never discouraging
       - Leave explanation empty for minor errors or correct usage that doesn't warrant detailed analysis
     - Do NOT correct punctuation marks like periods (।) - these are not important in spoken dialogue
-    ${scenarioContext ? '- Remember: You are the character in the scenario having a real conversation, not a teacher! Stay in character!' : ''}
+    ${
+      scenarioContext
+        ? "- Remember: You are the character in the scenario having a real conversation, not a teacher! Stay in character!"
+        : ""
+    }
     - Make the conversation feel natural, continuous, and perpetual with varied response types
     - Focus on being engaging, friendly, and authentic to your character role while maintaining conversation flow
 
@@ -239,11 +260,11 @@ FINAL REMINDER:
   try {
     const responseText = await callLLM(prompt);
     console.log("🤖 LLM Raw response:", responseText);
-    
+
     let correction, explanation, detailedFeedback;
     try {
       const parsed = JSON.parse(responseText);
-      
+
       // Check if this is a quiz question generation response (has question/correctAnswer format)
       if (parsed.question && parsed.correctAnswer) {
         // For quiz question generation, return the raw JSON in the correction field
@@ -254,22 +275,43 @@ FINAL REMINDER:
         // Normal response format with correction/explanation fields
         correction = parsed.correction;
         explanation = parsed.explanation;
-        
+
         // Extract detailed feedback if present (for echo mode)
-        if (parsed.detailedFeedback && mode === 'echo') {
+        if (parsed.detailedFeedback && mode === "echo") {
           detailedFeedback = {
-            pronunciationScore: Math.max(0, Math.min(100, parsed.detailedFeedback.pronunciationScore || 0)),
-            grammarScore: Math.max(0, Math.min(100, parsed.detailedFeedback.grammarScore || 0)),
-            vocabularyScore: Math.max(0, Math.min(100, parsed.detailedFeedback.vocabularyScore || 0)),
-            fluencyScore: Math.max(0, Math.min(100, parsed.detailedFeedback.fluencyScore || 0)),
-            overallScore: Math.max(0, Math.min(100, parsed.detailedFeedback.overallScore || 0)),
+            pronunciationScore: Math.max(
+              0,
+              Math.min(100, parsed.detailedFeedback.pronunciationScore || 0)
+            ),
+            grammarScore: Math.max(
+              0,
+              Math.min(100, parsed.detailedFeedback.grammarScore || 0)
+            ),
+            vocabularyScore: Math.max(
+              0,
+              Math.min(100, parsed.detailedFeedback.vocabularyScore || 0)
+            ),
+            fluencyScore: Math.max(
+              0,
+              Math.min(100, parsed.detailedFeedback.fluencyScore || 0)
+            ),
+            overallScore: Math.max(
+              0,
+              Math.min(100, parsed.detailedFeedback.overallScore || 0)
+            ),
             feedback: parsed.detailedFeedback.feedback || "Good effort!",
-            strengths: parsed.detailedFeedback.strengths || ["You're practicing"],
-            weaknesses: parsed.detailedFeedback.weaknesses || ["Keep improving"],
-            recommendations: parsed.detailedFeedback.recommendations || ["Continue practicing"]
+            strengths: parsed.detailedFeedback.strengths || [
+              "You're practicing",
+            ],
+            weaknesses: parsed.detailedFeedback.weaknesses || [
+              "Keep improving",
+            ],
+            recommendations: parsed.detailedFeedback.recommendations || [
+              "Continue practicing",
+            ],
           };
         }
-        
+
         // Handle legacy response formats that might have different field names
         if (!correction && parsed.response) {
           correction = parsed.response;
@@ -281,12 +323,15 @@ FINAL REMINDER:
     } catch (jsonError) {
       console.error("❌ LLM JSON parsing error:", jsonError);
       console.error("❌ LLM Raw response:", responseText);
-      
+
       // Fallback: try to extract content even if not valid JSON
-      correction = responseText.includes('correction') ? responseText : "Response received but format was incorrect";
-      explanation = "The AI response was not in the expected format. Please try again.";
+      correction = responseText.includes("correction")
+        ? responseText
+        : "Response received but format was incorrect";
+      explanation =
+        "The AI response was not in the expected format. Please try again.";
     }
-    
+
     const response: LLMResponse = {
       correction: correction || "No correction provided",
       explanation: explanation || "No explanation provided",
@@ -312,7 +357,7 @@ export const generateConversationStarter = async (
   scenarioId?: string
 ): Promise<LLMResponse> => {
   // Get scenario context if provided
-  let scenarioContext = '';
+  let scenarioContext = "";
   if (scenarioId) {
     const scenario = getScenarioById(scenarioId);
     if (scenario) {
@@ -330,7 +375,11 @@ ${scenarioContext}
 
 Generate a natural conversation starter question or greeting that would encourage the user to respond and practice speaking.
 
-${scenarioContext ? 'Stay in character for your scenario role and ask something appropriate for the situation.' : 'Ask a friendly, open-ended question that invites conversation.'}
+${
+  scenarioContext
+    ? "Stay in character for your scenario role and ask something appropriate for the situation."
+    : "Ask a friendly, open-ended question that invites conversation."
+}
 
 LANGUAGE REQUIREMENTS:
 - The question/greeting MUST be in ${learningLanguage}
@@ -359,21 +408,24 @@ Always return a **valid JSON** response like this:
   try {
     const responseText = await callLLM(prompt);
     console.log("🗣️ Conversation starter response:", responseText);
-    
+
     let correction, explanation;
     try {
       const parsed = JSON.parse(responseText);
       correction = parsed.correction;
       explanation = parsed.explanation;
     } catch (jsonError) {
-      console.error("❌ JSON parsing error for conversation starter:", jsonError);
+      console.error(
+        "❌ JSON parsing error for conversation starter:",
+        jsonError
+      );
       // Fallback
-      correction = scenarioContext ? 
-        "¡Hola! ¿Cómo estás hoy?" : 
-        "Hello! How are you today?";
+      correction = scenarioContext
+        ? "¡Hola! ¿Cómo estás hoy?"
+        : "Hello! How are you today?";
       explanation = "A simple greeting to start the conversation.";
     }
-    
+
     return {
       correction: correction || "¡Hola! ¿Cómo estás?",
       explanation: explanation || "A friendly conversation starter.",
@@ -381,7 +433,9 @@ Always return a **valid JSON** response like this:
       explanationVoiceId: getVoiceId(nativeLanguage),
     };
   } catch (error) {
-    throw new Error(`Conversation starter generation failed: ${(error as Error).message}`);
+    throw new Error(
+      `Conversation starter generation failed: ${(error as Error).message}`
+    );
   }
 };
 
@@ -391,19 +445,24 @@ export const generateConversationStarterNoScenario = async (
   nativeLanguage: string
 ): Promise<LLMResponse> => {
   const starterPrompts = {
-    'es-ES': '¡Hola! ¿Cómo estás hoy? Me gustaría conocerte mejor.',
-    'fr-FR': 'Bonjour ! Comment allez-vous aujourd\'hui ? J\'aimerais mieux vous connaître.',
-    'en-US': 'Hello! How are you today? I\'d like to get to know you better.',
-    'hi-IN': 'नमस्ते! आज आप कैसे हैं? मैं आपको बेहतर जानना चाहूंगा।',
-    'ja-JP': 'こんにちは！今日はいかがですか？あなたのことをもっと知りたいです。',
-    'it-IT': 'Ciao! Come stai oggi? Mi piacerebbe conoscerti meglio.',
-    'de-DE': 'Hallo! Wie geht es dir heute? Ich würde dich gerne besser kennenlernen.',
-    'nl-NL': 'Hallo! Hoe gaat het vandaag? Ik zou je graag beter leren kennen.',
-    'pt-BR': 'Olá! Como você está hoje? Gostaria de conhecê-lo melhor.'
+    "es-ES": "¡Hola! ¿Cómo estás hoy? Me gustaría conocerte mejor.",
+    "fr-FR":
+      "Bonjour ! Comment allez-vous aujourd'hui ? J'aimerais mieux vous connaître.",
+    "en-US": "Hello! How are you today? I'd like to get to know you better.",
+    "hi-IN": "नमस्ते! आज आप कैसे हैं? मैं आपको बेहतर जानना चाहूंगा।",
+    "ja-JP":
+      "こんにちは！今日はいかがですか？あなたのことをもっと知りたいです。",
+    "it-IT": "Ciao! Come stai oggi? Mi piacerebbe conoscerti meglio.",
+    "de-DE":
+      "Hallo! Wie geht es dir heute? Ich würde dich gerne besser kennenlernen.",
+    "nl-NL": "Hallo! Hoe gaat het vandaag? Ik zou je graag beter leren kennen.",
+    "pt-BR": "Olá! Como você está hoje? Gostaria de conhecê-lo melhor.",
   };
 
-  const startingPrompt = starterPrompts[learningLanguage as keyof typeof starterPrompts] || starterPrompts['en-US'];
-  
+  const startingPrompt =
+    starterPrompts[learningLanguage as keyof typeof starterPrompts] ||
+    starterPrompts["en-US"];
+
   return {
     correction: startingPrompt,
     explanation: `Starting a friendly conversation to practice ${learningLanguage}`,
