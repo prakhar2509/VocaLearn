@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,11 @@ export default function HeroSection({
   isMounted,
   isVisible,
 }: HeroSectionProps) {
+  const router = useRouter();
+
+  const handleStartLearning = () => {
+    router.push("/voice-practice");
+  };
   return (
     <section
       id="hero"
@@ -56,6 +62,7 @@ export default function HeroSection({
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center mb-12">
               <Button
                 size="lg"
+                onClick={handleStartLearning}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-6 text-lg"
               >
                 Start Learning Now
