@@ -6,7 +6,14 @@ import { config } from "./config";
 import { processAudioStream } from "./asr";
 import { generateResponse } from "./llm";
 import { generateAndSendTTS } from "./murf";
-import { Language } from "@google/genai";
+import { 
+  ClientSession as QuizClientSession, 
+  initializeQuiz, 
+  generateAndSendQuizQuestion,
+  handleQuizAnswer,
+  handleQuizControlMessage
+} from "./quiz";
+
 
 const app = express();
 app.use(cors());
@@ -20,6 +27,11 @@ interface ClientSession {
   learningLanguage: string;
   nativeLanguage: string;
   mode: string;
+  quiz?: any; // Use quiz session from quiz.ts
+  isProcessing?: boolean;
+  lastTranscription?: string;
+  lastTranscriptionTime?: number;
+  retryCount?: number;
 }
 
 const sessions = new Map<WebSocket, ClientSession>();
@@ -38,13 +50,25 @@ wss.on("connection", (ws, req) => {
     mode,
   });
 
-  const timeoutId = setTimeout(() => {
+  // Initialize quiz if mode is quiz
+  if (mode === "quiz") {
+    const session = sessions.get(ws)!;
+    initializeQuiz(session, params);
+    console.log(`🧪 Quiz initialized for ${learningLanguage} -> ${nativeLanguage}`);
+    
+    // Start the first question immediately
+    setTimeout(async () => {
+      await generateAndSendQuizQuestion(ws, sessions);
+    }, 1000);
+  }
+
+  let timeoutId = setTimeout(() => {
     if (sessions.has(ws)) {
       console.log('WebSocket connection timed out');
       ws.send(JSON.stringify({ error: 'Connection timed out' }));
       ws.close();
     }
-  }, 30000); 
+  }, 60000); // Increased to 60 seconds 
 
   ws.on("message", async (data: Buffer) => {
     
@@ -58,13 +82,45 @@ wss.on("connection", (ws, req) => {
 
       if (data.toString().startsWith("{")) {
         const message = JSON.parse(data.toString());
+        
+        // Handle quiz control messages first
+        if (session.mode === "quiz") {
+          const handled = await handleQuizControlMessage(ws, sessions, message);
+          if (handled) return;
+        }
+        
         if (message.end === true) {
+          // Clear timeout when processing starts
+          clearTimeout(timeoutId);
+          
+          // Handle quiz answer if in quiz mode
+          if (session.mode === "quiz" && session.quiz?.isWaitingForAnswer) {
+            const transcription = await processAudioStream(
+              session.audioChunks,
+              session.learningLanguage
+            );
+            console.log("✅ Quiz answer transcription:", transcription.text);
+            await handleQuizAnswer(ws, transcription.text, sessions);
+            session.audioChunks = [];
+            
+            // Reset timeout after processing
+            timeoutId = setTimeout(() => {
+              if (sessions.has(ws)) {
+                console.log('WebSocket connection timed out');
+                ws.send(JSON.stringify({ error: 'Connection timed out' }));
+                ws.close();
+              }
+            }, 60000);
+            return;
+          }
+          
+          // Regular dialogue/echo mode processing
           const transcription = await processAudioStream(
             session.audioChunks,
             session.learningLanguage
           );
-            console.log("✅ Transcription:", transcription.text);
-          clearTimeout(timeoutId)
+          console.log("✅ Transcription:", transcription.text);
+          
           ws.send(
             JSON.stringify({
               transcription: transcription.text,
@@ -78,7 +134,7 @@ wss.on("connection", (ws, req) => {
             session.nativeLanguage,
             session.mode
           );
-            console.log("✅ Response:", response);
+          console.log("✅ Response:", response);
           ws.send(
             JSON.stringify({
               correction: response.correction,
@@ -110,9 +166,28 @@ wss.on("connection", (ws, req) => {
             })
           )
 
-          session.audioChunks = []; 
+          session.audioChunks = [];
+          
+          // Reset timeout after processing
+          timeoutId = setTimeout(() => {
+            if (sessions.has(ws)) {
+              console.log('WebSocket connection timed out');
+              ws.send(JSON.stringify({ error: 'Connection timed out' }));
+              ws.close();
+            }
+          }, 60000); 
         }
       } else {
+        // Reset timeout when receiving audio data
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          if (sessions.has(ws)) {
+            console.log('WebSocket connection timed out');
+            ws.send(JSON.stringify({ error: 'Connection timed out' }));
+            ws.close();
+          }
+        }, 60000);
+        
         if (data.length > 0) {
           session.audioChunks.push(data);
         } else {
@@ -129,7 +204,7 @@ wss.on("connection", (ws, req) => {
   });
 
   ws.on("close", () => {
-    clearTimeout(timeoutId)
+    clearTimeout(timeoutId);
     sessions.delete(ws);
     console.log("Client Disconnected");
   });

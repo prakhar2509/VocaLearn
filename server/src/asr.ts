@@ -8,14 +8,12 @@ interface Transcription {
   language: string;
 }
 
-export const supportedLanguages = ['en-US', 'es-ES', 'fr-FR', 'hi-IN'];
-
 export const processAudioStream = async (audioChunks: Buffer[], language: string): Promise<Transcription> => {
   if (!audioChunks || audioChunks.length === 0) {
     throw new Error('Invalid or empty audio data');
   }
   if (!language || !getSupportedLanguageCodes().includes(language)) {
-    throw new Error(`Unsupported language: ${language}. Supported languages are: ${supportedLanguages.join(', ')}`);
+    throw new Error(`Unsupported language: ${language}. Supported languages are: ${getSupportedLanguageCodes().join(', ')}`);
   }
   if (!config.deepgramApiKey) {
     throw new Error('Deepgram API key is missing');
@@ -83,14 +81,19 @@ export const processAudioStream = async (audioChunks: Buffer[], language: string
 
         const transcription = data?.channel?.alternatives?.[0]?.transcript;
         if (transcription) {
-          accumulatedTranscript += transcription + ' ';
           console.log(`Deepgram transcript: ${transcription} (is_final: ${data.is_final}, speech_final: ${data.speech_final}, from_finalize: ${data.from_finalize})`);
+          
+          // Store the latest final transcript (don't accumulate to avoid duplicates)
+          if (data.is_final) {
+            accumulatedTranscript = transcription;
+          }
         }
 
         if (transcription && data.is_final && (data.speech_final || data.from_finalize)) {
           console.log('Deepgram received final speech/transcript. Resolving...');
+          console.log(`✅ Transcription: ${accumulatedTranscript}`);
           cleanup();
-          resolve({ text: accumulatedTranscript.trim(), language });
+          resolve({ text: accumulatedTranscript, language });
         }
       });
 

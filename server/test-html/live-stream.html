@@ -29,6 +29,37 @@
   <body>
     <h1>🎙️ VoiceStudy: Live Audio Stream</h1>
 
+    <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+      <h3>📚 Language Settings</h3>
+      <label for="learningLang">Learning Language:</label>
+      <select id="learningLang" style="margin: 0 10px; padding: 5px;">
+        <option value="es-ES">Spanish</option>
+        <option value="fr-FR">French</option>
+        <option value="en-US">English</option>
+        <option value="hi-IN" selected>Hindi</option>
+        <option value="jp-JP">Japanese</option>
+        <option value="it-IT">Italian</option>
+        <option value="de-DE">German</option>
+      </select>
+      
+      <label for="nativeLang">Native Language:</label>
+      <select id="nativeLang" style="margin: 0 10px; padding: 5px;">
+        <option value="en-US" selected>English</option>
+        <option value="es-ES">Spanish</option>
+        <option value="fr-FR">French</option>
+        <option value="hi-IN">Hindi</option>
+        <option value="jp-JP">Japanese</option>
+        <option value="it-IT">Italian</option>
+        <option value="de-DE">German</option>
+      </select>
+      
+      <label for="mode">Mode:</label>
+      <select id="mode" style="margin: 0 10px; padding: 5px;">
+        <option value="dialogue" selected>Dialogue</option>
+        <option value="echo">Echo</option>
+      </select>
+    </div>
+
     <button id="start">Start Streaming</button>
     <button id="stop" disabled>Stop Streaming</button>
     <p id="status">🔴 Not connected</p>
@@ -43,17 +74,24 @@
     <p id="explanation">–</p>
 
     <script type="module">
-      const WS_URL =
-        "ws://localhost:4001?learningLanguage=es-ES&nativeLanguage=en-US&mode=echo";
+      const startBtn = document.getElementById("start");
+      const stopBtn = document.getElementById("stop");
+      const status = document.getElementById("status");
+      const learningLang = document.getElementById("learningLang");
+      const nativeLang = document.getElementById("nativeLang");
+      const mode = document.getElementById("mode");
 
       let ws;
       let audioCtx;
       let workletNode;
       let audioStream;
 
-      const startBtn = document.getElementById("start");
-      const stopBtn = document.getElementById("stop");
-      const status = document.getElementById("status");
+      function getWsUrl() {
+        const learning = learningLang.value;
+        const native = nativeLang.value;
+        const selectedMode = mode.value;
+        return `ws://localhost:4001?learningLanguage=${learning}&nativeLanguage=${native}&mode=${selectedMode}`;
+      }
 
       let gotTranscription = false;
       let gotCorrection = false;
@@ -62,7 +100,7 @@
       let gotAudioExplanation = false;
 
       startBtn.onclick = async () => {
-        ws = new WebSocket(WS_URL);
+        ws = new WebSocket(getWsUrl());
 
         ws.binaryType = "arraybuffer";
 
