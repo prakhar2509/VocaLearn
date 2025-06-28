@@ -91,19 +91,19 @@ export default function Navigation({
               ) : (
                 <>
                   <button
-                    onClick={() => handleModeNavigation("echo-mode")}
+                    onClick={() => handleModeNavigation("echo")}
                     className="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium"
                   >
                     Echo Mode
                   </button>
                   <button
-                    onClick={() => handleModeNavigation("dialogue-mode")}
+                    onClick={() => handleModeNavigation("dialogue")}
                     className="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium"
                   >
                     Dialogue Mode
                   </button>
                   <button
-                    onClick={() => handleModeNavigation("quiz-mode")}
+                    onClick={() => handleModeNavigation("quiz")}
                     className="text-gray-700 hover:text-indigo-600 transition-colors duration-200 font-medium"
                   >
                     Quiz Mode
@@ -168,19 +168,19 @@ export default function Navigation({
             ) : (
               <>
                 <button
-                  onClick={() => handleModeNavigation("echo-mode")}
+                  onClick={() => handleModeNavigation("echo")}
                   className="block w-full text-left text-gray-700 hover:text-indigo-600 transition-colors py-2 font-medium"
                 >
                   Echo Mode
                 </button>
                 <button
-                  onClick={() => handleModeNavigation("dialogue-mode")}
+                  onClick={() => handleModeNavigation("dialogue")}
                   className="block w-full text-left text-gray-700 hover:text-indigo-600 transition-colors py-2 font-medium"
                 >
                   Dialogue Mode
                 </button>
                 <button
-                  onClick={() => handleModeNavigation("quiz-mode")}
+                  onClick={() => handleModeNavigation("quiz")}
                   className="block w-full text-left text-gray-700 hover:text-indigo-600 transition-colors py-2 font-medium"
                 >
                   Quiz Mode
