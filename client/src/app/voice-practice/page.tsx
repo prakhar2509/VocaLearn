@@ -36,7 +36,7 @@ export default function VoicePractice() {
         "Audio playback comparison",
         "Progress tracking",
       ],
-      route: "/echo-mode",
+      route: "/echo",
     },
     {
       id: "dialogue",
@@ -52,7 +52,7 @@ export default function VoicePractice() {
         "Context-aware responses",
         "Scenario-based practice",
       ],
-      route: "/dialogue-mode",
+      route: "/dialogue",
     },
     {
       id: "quiz",
@@ -68,7 +68,7 @@ export default function VoicePractice() {
         "Translation & scenario questions",
         "Detailed performance feedback",
       ],
-      route: "/quiz-mode",
+      route: "/quiz",
     },
   ];
 
