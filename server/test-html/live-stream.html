@@ -102,6 +102,35 @@
       </div>
     </div>
 
+    <!-- Detailed AI Analysis Section (for Echo Mode) -->
+    <div id="detailedFeedbackSection" style="display: none; margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 5px; border-left: 4px solid #28a745;">
+      <h2>🧠 Detailed AI Analysis</h2>
+      
+      <!-- Strengths, Weaknesses, and Recommendations -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+        <div style="background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <h3 style="margin-top: 0; color: #28a745;">✅ Strengths</h3>
+          <ul id="strengthsList" style="margin: 0; padding-left: 20px;">
+            <li>No feedback yet</li>
+          </ul>
+        </div>
+        
+        <div style="background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <h3 style="margin-top: 0; color: #dc3545;">🎯 Areas for Improvement</h3>
+          <ul id="weaknessesList" style="margin: 0; padding-left: 20px;">
+            <li>No feedback yet</li>
+          </ul>
+        </div>
+        
+        <div style="background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <h3 style="margin-top: 0; color: #007bff;">💡 Recommendations</h3>
+          <ul id="recommendationsList" style="margin: 0; padding-left: 20px;">
+            <li>No recommendations yet</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <script type="module">
       const startBtn = document.getElementById("start");
       const stopBtn = document.getElementById("stop");
@@ -220,6 +249,50 @@
             updateScoreColor('pronunciationScore', data.pronunciationScore);
             updateScoreColor('grammarScore', data.grammarScore);
             updateScoreColor('fluencyScore', data.fluencyScore);
+          }
+
+          // Handle detailed LLM feedback (for echo mode)
+          if (data.llmDetailedFeedback) {
+            const feedback = data.llmDetailedFeedback;
+            
+            // Update strengths
+            const strengthsList = document.getElementById("strengthsList");
+            strengthsList.innerHTML = "";
+            if (feedback.strengths && feedback.strengths.length > 0) {
+              feedback.strengths.forEach(strength => {
+                const li = document.createElement("li");
+                li.textContent = strength;
+                li.style.color = "#28a745";
+                strengthsList.appendChild(li);
+              });
+            }
+            
+            // Update weaknesses
+            const weaknessesList = document.getElementById("weaknessesList");
+            weaknessesList.innerHTML = "";
+            if (feedback.weaknesses && feedback.weaknesses.length > 0) {
+              feedback.weaknesses.forEach(weakness => {
+                const li = document.createElement("li");
+                li.textContent = weakness;
+                li.style.color = "#dc3545";
+                weaknessesList.appendChild(li);
+              });
+            }
+            
+            // Update recommendations
+            const recommendationsList = document.getElementById("recommendationsList");
+            recommendationsList.innerHTML = "";
+            if (feedback.recommendations && feedback.recommendations.length > 0) {
+              feedback.recommendations.forEach(recommendation => {
+                const li = document.createElement("li");
+                li.textContent = recommendation;
+                li.style.color = "#007bff";
+                recommendationsList.appendChild(li);
+              });
+            }
+            
+            // Show the detailed feedback section
+            document.getElementById("detailedFeedbackSection").style.display = 'block';
           }
 
           if (data.correction) {

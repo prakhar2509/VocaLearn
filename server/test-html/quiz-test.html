@@ -468,11 +468,78 @@
         
         // Show summary
         summarySection.style.display = "block";
-        summaryContent.innerHTML = `
+        
+        let summaryHtml = `
           <div class="score">${data.score}/${data.totalQuestions}</div>
           <div style="font-size: 18px; margin: 10px 0;">${data.percentage}% correct</div>
-          <div>${data.summary}</div>
+          <div style="margin-bottom: 20px;">${data.summary}</div>
         `;
+        
+        // Add detailed feedback if available
+        if (data.detailedFeedback) {
+          const feedback = data.detailedFeedback;
+          summaryHtml += `
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #28a745;">
+              <h3 style="margin-top: 0; color: #007bff;">🧠 Detailed Performance Analysis</h3>
+              
+              <!-- Detailed Scores -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <strong>Overall</strong><br>
+                  <span style="font-size: 20px; font-weight: bold; color: ${feedback.overallScore >= 80 ? '#28a745' : feedback.overallScore >= 60 ? '#ffc107' : '#dc3545'};">${Math.round(feedback.overallScore || 0)}%</span>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <strong>Pronunciation</strong><br>
+                  <span style="font-size: 20px; font-weight: bold; color: ${feedback.pronunciationScore >= 80 ? '#28a745' : feedback.pronunciationScore >= 60 ? '#ffc107' : '#dc3545'};">${Math.round(feedback.pronunciationScore || 0)}%</span>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <strong>Grammar</strong><br>
+                  <span style="font-size: 20px; font-weight: bold; color: ${feedback.grammarScore >= 80 ? '#28a745' : feedback.grammarScore >= 60 ? '#ffc107' : '#dc3545'};">${Math.round(feedback.grammarScore || 0)}%</span>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <strong>Vocabulary</strong><br>
+                  <span style="font-size: 20px; font-weight: bold; color: ${feedback.vocabularyScore >= 80 ? '#28a745' : feedback.vocabularyScore >= 60 ? '#ffc107' : '#dc3545'};">${Math.round(feedback.vocabularyScore || 0)}%</span>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <strong>Comprehension</strong><br>
+                  <span style="font-size: 20px; font-weight: bold; color: ${feedback.comprehensionScore >= 80 ? '#28a745' : feedback.comprehensionScore >= 60 ? '#ffc107' : '#dc3545'};">${Math.round(feedback.comprehensionScore || 0)}%</span>
+                </div>
+              </div>
+
+              <!-- Detailed Feedback Text -->
+              <div style="background: white; padding: 15px; border-radius: 5px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h4 style="margin-top: 0; color: #007bff;">💬 AI Feedback</h4>
+                <p style="margin: 0; line-height: 1.6;">${feedback.feedback || 'No detailed feedback available'}</p>
+              </div>
+
+              <!-- Strengths, Weaknesses, and Recommendations -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <div style="background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <h4 style="margin-top: 0; color: #28a745;">✅ Strengths</h4>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${feedback.strengthsAndWeaknesses?.strengths?.map(strength => `<li style="color: #28a745;">${strength}</li>`).join('') || '<li>Keep up the good work!</li>'}
+                  </ul>
+                </div>
+                
+                <div style="background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <h4 style="margin-top: 0; color: #dc3545;">🎯 Areas for Improvement</h4>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${feedback.strengthsAndWeaknesses?.weaknesses?.map(weakness => `<li style="color: #dc3545;">${weakness}</li>`).join('') || '<li>Continue practicing!</li>'}
+                  </ul>
+                </div>
+                
+                <div style="background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <h4 style="margin-top: 0; color: #007bff;">💡 Recommendations</h4>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${feedback.strengthsAndWeaknesses?.recommendations?.map(rec => `<li style="color: #007bff;">${rec}</li>`).join('') || '<li>Keep learning!</li>'}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        
+        summaryContent.innerHTML = summaryHtml;
         
         // Store summary audio
         currentSummaryAudio = data.summaryAudioUrl;
