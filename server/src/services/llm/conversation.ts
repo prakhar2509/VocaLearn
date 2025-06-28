@@ -3,6 +3,7 @@
 import { callLLM, LLMResponse } from "./base";
 import { getVoiceId } from "../../utils/languages";
 import { getScenarioById } from "../../utils/scenarios";
+import { getConversationContext } from "../../managers/session-manager";
 
 // Generate initial scenario greeting
 export const generateScenarioGreeting = async (
@@ -19,7 +20,7 @@ export const generateScenarioGreeting = async (
   
   return {
     correction: startingPrompt,
-    explanation: `Starting ${scenario.title} scenario: ${scenario.description}`,
+    explanation: "", // No explanation needed for initial greeting
     correctionVoiceId: getVoiceId(learningLanguage),
     explanationVoiceId: getVoiceId(nativeLanguage),
   };
@@ -31,7 +32,8 @@ export const generateResponse = async (
   learningLanguage: string,
   nativeLanguage: string,
   mode: string,
-  scenarioId?: string
+  scenarioId?: string,
+  conversationHistory?: Array<{role: 'user' | 'assistant'; content: string; timestamp: number}>
 ): Promise<LLMResponse> => {
   if (!["echo", "dialogue", "quiz"].includes(mode)) {
     throw new Error(`Invalid Mode : ${mode}`);
@@ -50,6 +52,39 @@ Scenario: ${scenario.title} - ${scenario.description}
     }
   }
 
+  // Build conversation history context
+  let conversationContext = '';
+  if (conversationHistory && conversationHistory.length > 0 && mode === 'dialogue') {
+    // Sort by timestamp to ensure correct order
+    const sortedHistory = conversationHistory.sort((a, b) => a.timestamp - b.timestamp);
+    
+    conversationContext = '\n\nCONVERSATION HISTORY (maintain context and continuity):\n';
+    
+    // Show more recent messages with more detail, older ones summarized
+    const recentMessages = sortedHistory.slice(-8); // Last 8 messages (4 exchanges)
+    const olderMessages = sortedHistory.slice(0, -8);
+    
+    // Summarize older part if it exists
+    if (olderMessages.length > 0) {
+      conversationContext += `[Earlier conversation context: We discussed various topics and have been chatting naturally]\n`;
+    }
+    
+    // Show recent messages in detail
+    recentMessages.forEach((message, index) => {
+      const role = message.role === 'user' ? 'User' : 'You (AI)';
+      conversationContext += `${role}: ${message.content}\n`;
+    });
+    
+    conversationContext += `\nCURRENT MESSAGE: User just said: "${text}"\n`;
+    conversationContext += `CRITICAL CONTEXT INSTRUCTIONS:\n`;
+    conversationContext += `- You are continuing an ongoing conversation - NOT starting fresh!\n`;
+    conversationContext += `- Reference previous topics and continue naturally from where we left off\n`;
+    conversationContext += `- Show that you remember what was discussed by building on previous exchanges\n`;
+    conversationContext += `- Maintain conversation continuity - each response should feel connected to the previous messages\n`;
+    conversationContext += `- You are the character in this scenario, NOT a language teacher - stay in character!\n`;
+    conversationContext += `- Respond naturally based on this conversation context and what the user just said.\n`;
+  }
+
   const prompt = `
 You are a language tutor for ${learningLanguage}, and you explain things in ${nativeLanguage}.
 
@@ -57,6 +92,7 @@ The user said: "${text}" (in ${learningLanguage}).
 
 - Mode: ${mode}
 ${scenarioContext}
+${conversationContext}
 
 CRITICAL: You are in "${mode}" mode. Follow the specific instructions for this mode only.
 
@@ -69,18 +105,33 @@ IMPORTANT LANGUAGE RULES:
 - For 'echo' mode: If the input is incorrect, provide ONLY the corrected version in ${learningLanguage} in the "correction" field - no additional text, affirmations, or suggestions. If correct, leave the "correction" field empty or put the original text. Put explanations in the "explanation" field (in ${nativeLanguage}).
 
 - For 'dialogue' mode: Generate a natural conversational response in ${learningLanguage} that continues the dialogue.
-    ${scenarioContext ? 'SCENARIO MODE: You are role-playing in this scenario. Stay completely in character and respond as the role described in the scenario context. Make the conversation immersive and realistic. Keep the conversation flowing naturally - ask follow-up questions, share relevant information, or respond to what the user said.' : ''}
-    IMPORTANT: Do NOT correct punctuation or minor formatting - focus on having a natural conversation.
-    - If the user introduces themselves, respond conversationally and appropriately for your role
-    - If the user asks a question, answer it naturally from your character's perspective and ask a follow-up question to keep the conversation going
-    - If the user makes a statement, respond with interest, share related thoughts, or ask a follow-up question that fits the scenario
-    - Keep the conversation flowing naturally and engagingly - like a real person would
-    - ALWAYS try to continue the conversation with a question, comment, or new topic related to the scenario
-    - Store this conversational response in the "correction" field (in ${learningLanguage})
-    - Only use the "explanation" field if there were serious grammar errors that affected meaning - and explanations must be in ${nativeLanguage}
+    ${scenarioContext ? 'SCENARIO MODE: You are role-playing in this scenario. Stay completely in character and respond as the role described in the scenario context. Make the conversation immersive and realistic. Keep the conversation flowing naturally - share information about yourself, react to what the user said, make comments, and sometimes ask follow-up questions.' : ''}
+    
+    CRITICAL DIALOGUE RULES:
+    • You are NOT a language tutor - you are having a REAL conversation as the character in the scenario!
+    • MAINTAIN CONVERSATION CONTINUITY: Reference previous topics, build on what was discussed, remember details shared
+    • VARY your response types: 
+      - Share personal information/experiences (as your character)
+      - Make observations or comments about what the user said
+      - Ask follow-up questions (but not always!)
+      - Tell related stories or anecdotes
+      - Express emotions and reactions (surprise, interest, agreement, etc.)
+      - Continue topics they brought up or introduce related new ones
+    • Do NOT always end with a question - mix statements, comments, reactions, and questions
+    • Show personality based on your character role - be engaging and personable
+    • React naturally to what the user says (show interest, surprise, agreement, relate to their experiences)
+    • If they ask a question, answer thoroughly and add your own related thoughts
+    • If they make a statement, respond with related thoughts, experiences, or observations
+    • Use conversational fillers and natural speech patterns
+    • Reference earlier parts of the conversation when relevant to show you remember and care about the ongoing dialogue
+    • Make the conversation feel continuous and connected, not like separate question-answer pairs
+    
+    - Store this conversational response in the "correction" field (in ${learningLanguage}) - this field name is just for technical reasons, it contains your conversation response
+    - Only use the "explanation" field if there were serious grammar errors that completely changed the meaning - and explanations must be in ${nativeLanguage}
     - Do NOT correct punctuation marks like periods (।) - these are not important in spoken dialogue
-    ${scenarioContext ? '- Remember: You are NOT a language tutor in this mode - you are the character in the scenario having a real conversation!' : ''}
-    - Make the conversation feel natural and perpetual, not like it\'s ending after one exchange
+    ${scenarioContext ? '- Remember: You are the character in the scenario having a real conversation, not a teacher! Stay in character!' : ''}
+    - Make the conversation feel natural, continuous, and perpetual with varied response types
+    - Focus on being engaging, friendly, and authentic to your character role while maintaining conversation flow
 
 - For 'quiz' mode: Evaluate the user's SPOKEN answer to a quiz question in ${learningLanguage}. 
     IMPORTANT: This is spoken language assessment - DO NOT penalize for missing punctuation marks, written formatting, or visual elements that cannot be heard in speech.
@@ -188,10 +239,16 @@ LANGUAGE REQUIREMENTS:
 - Encourage a response from the user
 - Keep it simple but engaging
 
+CONVERSATION STYLE EXAMPLES:
+- Mix questions with statements: "I'm having a wonderful day too! The weather has been perfect. What brings you here today?"
+- Share information: "Oh, I love this place! I've been coming here for years. The atmosphere is always so welcoming."
+- React naturally: "That sounds really interesting! I can see why you'd enjoy that."
+- Vary response types: Don't always end with questions - sometimes just share thoughts or make observations
+
 Examples:
-- For café scenario: "¡Hola! ¿Es tu primera vez aquí? ¿Te ayudo con el menú?"
-- For social scenario: "¡Hola! ¿Cómo estás? ¿De dónde eres?"
-- For general dialogue: "¡Hola! ¿Cómo ha sido tu día?"
+- For café scenario: "¡Hola! Bienvenido a nuestro café. Es un día perfecto para un buen café, ¿verdad?"
+- For social scenario: "¡Hola! Me encanta esta fiesta. La música está genial y hay tanta gente interesante aquí."
+- For general dialogue: "¡Hola! Qué día tan hermoso. Me siento muy bien hoy."
 
 Always return a **valid JSON** response like this:
 {

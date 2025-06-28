@@ -6,7 +6,7 @@ import { generateResponse } from "../services/llm";
 import { calculateAccuracy } from "./llm/accuracy";
 import { generateAndSendTTS } from "../murf";
 import { handleQuizAnswer } from "../quiz";
-import { ClientSession, sessions, clearAudioChunks } from "../managers/session-manager";
+import { ClientSession, sessions, clearAudioChunks, addToConversationHistory, getConversationContext } from "../managers/session-manager";
 
 // Process quiz answer
 export const processQuizAnswer = async (ws: WebSocket, session: ClientSession): Promise<void> => {
@@ -34,9 +34,18 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     transcription.text,
     session.learningLanguage,
     session.nativeLanguage,
-    session.mode
+    session.mode,
+    session.scenarioId,
+    session.conversationHistory
   );
   console.log("✅ Response:", response);
+  
+  // Add user message to conversation history
+  if (session.mode === "dialogue") {
+    addToConversationHistory(session, 'user', transcription.text);
+    // Add AI response to conversation history
+    addToConversationHistory(session, 'assistant', response.correction);
+  }
   
   // Calculate accuracy for the user's speech
   let accuracyResult;
@@ -74,7 +83,7 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
   // Send text response
   ws.send(JSON.stringify({
     correction: response.correction,
-    explanation: response.explanation,
+    explanation: session.mode === "dialogue" ? "" : response.explanation, // No explanations in dialogue mode unless there's an error
     correctionLanguage: session.learningLanguage,
     explanationLanguage: session.nativeLanguage,
   }));
@@ -87,12 +96,16 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     "correction"
   );
   
-  const explanationAudio = await generateAndSendTTS(
-    ws,
-    response.explanation,
-    session.nativeLanguage,
-    "explanation"
-  );
+  // Only generate explanation audio if there's an explanation to give
+  let explanationAudio = "";
+  if (response.explanation && response.explanation.trim() && session.mode !== "dialogue") {
+    explanationAudio = await generateAndSendTTS(
+      ws,
+      response.explanation,
+      session.nativeLanguage,
+      "explanation"
+    );
+  }
 
   // Send completion message with audio URLs
   ws.send(JSON.stringify({

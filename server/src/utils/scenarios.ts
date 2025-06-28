@@ -99,7 +99,7 @@ export const dialogueScenarios: DialogueScenario[] = [
     startingPrompts: {
       'es-ES': '¡Hola! No creo que nos hayamos conocido antes. Soy Ana, ¿y tú?',
       'fr-FR': 'Salut ! Je ne pense pas qu\'on se soit rencontrés avant. Je suis Marie, et vous ?',
-      'en-US': 'Hi! I don\'t think we\'ve met before. I\'m Sarah, and you?',
+      'en-US': 'Hi! I don\'t think we\'ve met before. I\'m Paul, and you?',
       'hi-IN': 'हैलो! मुझे नहीं लगता कि हम पहले मिले हैं। मैं प्रिया हूं, और आप?',
       'ja-JP': 'こんにちは！以前にお会いしたことはないと思います。私は花子です。あなたは？',
       'it-IT': 'Ciao! Non credo che ci siamo mai incontrati prima. Sono Giulia, e tu?',
