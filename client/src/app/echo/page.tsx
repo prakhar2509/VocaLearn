@@ -65,6 +65,13 @@ interface AccuracyResponse {
   feedback: string;
 }
 
+// Detailed feedback interface
+interface DetailedFeedback {
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+}
+
 // Complete Echo response interface
 interface EchoResponse {
   transcription?: string;
@@ -101,6 +108,8 @@ export default function EchoMode() {
   const [accuracyScores, setAccuracyScores] = useState<AccuracyResponse | null>(
     null
   );
+  const [detailedFeedback, setDetailedFeedback] =
+    useState<DetailedFeedback | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<
@@ -174,6 +183,15 @@ export default function EchoMode() {
 
         if (data.explanation) {
           setAiResponse(data.explanation);
+        }
+
+        // Handle detailed LLM feedback
+        if (data.llmDetailedFeedback) {
+          setDetailedFeedback({
+            strengths: data.llmDetailedFeedback.strengths || [],
+            weaknesses: data.llmDetailedFeedback.weaknesses || [],
+            recommendations: data.llmDetailedFeedback.recommendations || [],
+          });
         }
 
         // Handle the "done" signal like in live-stream.html
@@ -353,6 +371,7 @@ export default function EchoMode() {
       setCorrectionAudio("");
       setExplanationAudio("");
       setAccuracyScores(null);
+      setDetailedFeedback(null);
       setPlayingAudio(null);
       setError(""); // Clear any previous errors
 
@@ -461,6 +480,7 @@ export default function EchoMode() {
     setCorrectionAudio("");
     setExplanationAudio("");
     setAccuracyScores(null);
+    setDetailedFeedback(null);
     setPlayingAudio(null);
     setError("");
   };
@@ -747,7 +767,11 @@ export default function EchoMode() {
         </Card>
 
         {/* Results Section */}
-        {(userText || aiResponse || correctionText || accuracyScores) && (
+        {(userText ||
+          aiResponse ||
+          correctionText ||
+          accuracyScores ||
+          detailedFeedback) && (
           <div className="space-y-6">
             {/* User Speech */}
             {userText && (
@@ -952,6 +976,106 @@ export default function EchoMode() {
                         </p>
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Detailed AI Analysis */}
+            {detailedFeedback && (
+              <Card className="border-0 shadow-lg bg-gradient-to-r from-emerald-50 to-teal-50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-2">
+                    <Brain className="w-5 h-5 text-emerald-600" />
+                    <CardTitle className="text-lg">
+                      Detailed AI Analysis
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {/* Strengths */}
+                    <div className="bg-white rounded-lg p-4 border border-emerald-100">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <h4 className="font-medium text-green-600">
+                          Strengths
+                        </h4>
+                      </div>
+                      <ul className="space-y-1">
+                        {detailedFeedback.strengths.length > 0 ? (
+                          detailedFeedback.strengths.map((strength, index) => (
+                            <li
+                              key={index}
+                              className="text-sm text-gray-700 flex items-start space-x-2"
+                            >
+                              <span className="text-green-500 mt-0.5">•</span>
+                              <span>{strength}</span>
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-sm text-gray-500 italic">
+                            No specific strengths identified
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+
+                    {/* Areas for Improvement */}
+                    <div className="bg-white rounded-lg p-4 border border-orange-100">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Target className="w-4 h-4 text-orange-600" />
+                        <h4 className="font-medium text-orange-600">
+                          Areas for Improvement
+                        </h4>
+                      </div>
+                      <ul className="space-y-1">
+                        {detailedFeedback.weaknesses.length > 0 ? (
+                          detailedFeedback.weaknesses.map((weakness, index) => (
+                            <li
+                              key={index}
+                              className="text-sm text-gray-700 flex items-start space-x-2"
+                            >
+                              <span className="text-orange-500 mt-0.5">•</span>
+                              <span>{weakness}</span>
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-sm text-gray-500 italic">
+                            No specific areas for improvement identified
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+
+                    {/* Recommendations */}
+                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Sparkles className="w-4 h-4 text-blue-600" />
+                        <h4 className="font-medium text-blue-600">
+                          Recommendations
+                        </h4>
+                      </div>
+                      <ul className="space-y-1">
+                        {detailedFeedback.recommendations.length > 0 ? (
+                          detailedFeedback.recommendations.map(
+                            (recommendation, index) => (
+                              <li
+                                key={index}
+                                className="text-sm text-gray-700 flex items-start space-x-2"
+                              >
+                                <span className="text-blue-500 mt-0.5">•</span>
+                                <span>{recommendation}</span>
+                              </li>
+                            )
+                          )
+                        ) : (
+                          <li className="text-sm text-gray-500 italic">
+                            No specific recommendations available
+                          </li>
+                        )}
+                      </ul>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
