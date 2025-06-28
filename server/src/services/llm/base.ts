@@ -50,6 +50,18 @@ export interface LLMResponse {
   explanation: string;
   correctionVoiceId: string;
   explanationVoiceId: string;
+  // Add detailed feedback for echo mode
+  detailedFeedback?: {
+    pronunciationScore: number;
+    grammarScore: number;
+    vocabularyScore: number;
+    fluencyScore: number;
+    overallScore: number;
+    feedback: string;
+    strengths: string[];
+    weaknesses: string[];
+    recommendations: string[];
+  };
 }
 
 // Accuracy response interface

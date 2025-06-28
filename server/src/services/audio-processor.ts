@@ -69,7 +69,7 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
   console.log("📊 Accuracy:", accuracyResult);
   
   // Send transcription and accuracy to client
-  ws.send(JSON.stringify({
+  const transcriptionData: any = {
     transcription: transcription.text,
     language: session.learningLanguage,
     // Accuracy data
@@ -78,17 +78,31 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     grammarScore: accuracyResult.grammarScore,
     fluencyScore: accuracyResult.fluencyScore,
     accuracyFeedback: accuracyResult.feedback
-  }));
+  };
+
+  // Add detailed feedback from LLM if available (for echo mode)
+  if (response.detailedFeedback && session.mode === "echo") {
+    transcriptionData.llmDetailedFeedback = response.detailedFeedback;
+  }
+
+  ws.send(JSON.stringify(transcriptionData));
   
-  // Send text response
-  ws.send(JSON.stringify({
+  // Send text response with detailed feedback for echo mode
+  const textResponse: any = {
     correction: response.correction,
     explanation: session.mode === "dialogue" ? "" : response.explanation, // No explanations in dialogue mode unless there's an error
     correctionLanguage: session.learningLanguage,
     explanationLanguage: session.nativeLanguage,
-  }));
+  };
 
-  // Generate audio responses
+  // Add detailed feedback to text response for echo mode
+  if (response.detailedFeedback && session.mode === "echo") {
+    textResponse.detailedFeedback = response.detailedFeedback;
+  }
+
+  ws.send(JSON.stringify(textResponse));
+
+  // Generate audio responses - ONLY for correction and explanation
   const correctionAudio = await generateAndSendTTS(
     ws,
     response.correction,
@@ -96,9 +110,11 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     "correction"
   );
   
-  // Only generate explanation audio if there's an explanation to give
+  // Generate explanation audio (refined explanations for all modes)
   let explanationAudio = "";
-  if (response.explanation && response.explanation.trim() && session.mode !== "dialogue") {
+  if (response.explanation && response.explanation.trim()) {
+    // Generate audio for explanation in all modes (echo, dialogue, quiz)
+    // The explanation content is now more refined based on the updated prompts
     explanationAudio = await generateAndSendTTS(
       ws,
       response.explanation,

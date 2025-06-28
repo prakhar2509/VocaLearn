@@ -2,6 +2,112 @@ import { WebSocket } from "ws";
 import { generateAndSendTTS } from "../murf";
 import { getLanguageName } from "../utils/languages";
 import { ClientSession } from "./types";
+import { callLLM } from "../services/llm/base";
+
+// Interface for detailed quiz feedback
+interface QuizDetailedFeedback {
+  pronunciationScore: number;
+  grammarScore: number;
+  vocabularyScore: number;
+  comprehensionScore: number;
+  overallScore: number;
+  feedback: string;
+  strengthsAndWeaknesses: {
+    strengths: string[];
+    weaknesses: string[];
+    recommendations: string[];
+  };
+}
+
+// Generate detailed quiz feedback using LLM
+const generateDetailedQuizFeedback = async (
+  questions: any[],
+  learningLanguage: string,
+  nativeLanguage: string
+): Promise<QuizDetailedFeedback> => {
+  const answeredQuestions = questions.filter(q => q.userAnswer);
+  const correctAnswers = answeredQuestions.filter(q => q.isCorrect).length;
+  const totalAnswered = answeredQuestions.length;
+
+  const prompt = `You are an expert language teacher analyzing a student's quiz performance. Provide concise, actionable feedback.
+
+QUIZ RESULTS:
+- Total questions answered: ${totalAnswered}
+- Correct answers: ${correctAnswers}
+- Learning language: ${learningLanguage}
+- Questions and answers:
+${answeredQuestions.map((q, i) => `
+${i + 1}. Q: ${q.question}
+   Expected: ${q.correctAnswer}
+   Student: ${q.userAnswer || 'Not answered'}
+   Result: ${q.isCorrect ? 'Correct' : 'Incorrect'}
+`).join('')}
+
+Provide scores (0-100) for:
+1. PRONUNCIATION: How well transcribed answers suggest good pronunciation
+2. GRAMMAR: Sentence structure, verb forms, word order correctness  
+3. VOCABULARY: Word choice and meaning understanding
+4. COMPREHENSION: Question understanding and context awareness
+5. OVERALL: Combined performance
+
+Give brief, encouraging feedback in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}:
+- Focus on 1-2 key strengths observed
+- Identify 1-2 main areas for improvement  
+- Suggest 1-2 specific practice recommendations
+
+Keep all feedback concise and actionable.
+
+Respond in JSON format:
+{
+  "pronunciationScore": <0-100>,
+  "grammarScore": <0-100>, 
+  "vocabularyScore": <0-100>,
+  "comprehensionScore": <0-100>,
+  "overallScore": <0-100>,
+  "feedback": "<brief encouraging summary in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>",
+  "strengthsAndWeaknesses": {
+    "strengths": ["<key strength 1>", "<key strength 2>"],
+    "weaknesses": ["<main weakness 1>", "<main weakness 2>"], 
+    "recommendations": ["<specific tip 1>", "<specific tip 2>"]
+  }
+}`;
+
+  try {
+    const response = await callLLM(prompt);
+    console.log("📊 LLM Quiz Feedback Response:", response);
+    
+    const parsed = JSON.parse(response);
+    
+    return {
+      pronunciationScore: Math.max(0, Math.min(100, parsed.pronunciationScore || 0)),
+      grammarScore: Math.max(0, Math.min(100, parsed.grammarScore || 0)),
+      vocabularyScore: Math.max(0, Math.min(100, parsed.vocabularyScore || 0)),
+      comprehensionScore: Math.max(0, Math.min(100, parsed.comprehensionScore || 0)),
+      overallScore: Math.max(0, Math.min(100, parsed.overallScore || 0)),
+      feedback: parsed.feedback || "Great effort on completing the quiz!",
+      strengthsAndWeaknesses: parsed.strengthsAndWeaknesses || {
+        strengths: ["You completed the quiz"],
+        weaknesses: ["Continue practicing"],
+        recommendations: ["Keep learning regularly"]
+      }
+    };
+  } catch (error) {
+    console.error("❌ Error generating detailed quiz feedback:", error);
+    return {
+      pronunciationScore: 50,
+      grammarScore: 50,
+      vocabularyScore: 50,
+      comprehensionScore: 50,
+      overallScore: 50,
+      feedback: "Great effort on completing the quiz! Keep practicing to improve your skills.",
+      strengthsAndWeaknesses: {
+        strengths: ["You completed the quiz", "You're actively learning"],
+        weaknesses: ["Continue practicing regularly"],
+        recommendations: ["Review vocabulary", "Practice speaking more", "Take more quizzes"]
+      }
+    };
+  }
+};
 
 // Generate quiz summary text in the native language
 const generateSummaryText = (
@@ -56,15 +162,32 @@ export const sendQuizSummary = async (
 
     console.log(`🎉 Quiz completed - Score: ${score}/${totalQuestions}`);
 
-    // Generate summary audio
+    // Generate detailed feedback analysis
+    const detailedFeedback = await generateDetailedQuizFeedback(
+      session.quiz.questions,
+      session.learningLanguage,
+      session.nativeLanguage
+    );
+
+    // Create shortened comprehensive feedback text for audio (more concise)
+    const comprehensiveFeedback = `
+${summaryText} ... 
+Performance Analysis: ${detailedFeedback.overallScore} out of 100. ...
+${detailedFeedback.feedback} ...
+Top strength: ${detailedFeedback.strengthsAndWeaknesses.strengths[0] || 'Good effort'} ...
+Focus on: ${detailedFeedback.strengthsAndWeaknesses.weaknesses[0] || 'Continue practicing'} ...
+Next step: ${detailedFeedback.strengthsAndWeaknesses.recommendations[0] || 'Keep learning'}
+    `.trim();
+
+    // Generate summary audio with shortened detailed feedback
     const summaryAudio = await generateAndSendTTS(
       ws,
-      summaryText,
+      comprehensiveFeedback,
       session.nativeLanguage,
       "explanation"
     );
 
-    // Send summary to client
+    // Send comprehensive summary to client with both basic and detailed data
     ws.send(JSON.stringify({
       type: "quiz_summary",
       score,
@@ -73,6 +196,18 @@ export const sendQuizSummary = async (
       summary: summaryText,
       summaryAudioUrl: summaryAudio,
       questions: session.quiz.questions, // Send all questions and answers for review
+      // Include detailed feedback in main response
+      detailedFeedback: {
+        pronunciationScore: detailedFeedback.pronunciationScore,
+        grammarScore: detailedFeedback.grammarScore,
+        vocabularyScore: detailedFeedback.vocabularyScore,
+        comprehensionScore: detailedFeedback.comprehensionScore,
+        overallScore: detailedFeedback.overallScore,
+        feedback: detailedFeedback.feedback,
+        strengths: detailedFeedback.strengthsAndWeaknesses.strengths,
+        weaknesses: detailedFeedback.strengthsAndWeaknesses.weaknesses,
+        recommendations: detailedFeedback.strengthsAndWeaknesses.recommendations
+      }
     }));
 
     // Reset quiz state
@@ -136,15 +271,31 @@ export const endQuizEarly = async (
   const summaryText = generateEarlyEndText(score, currentQuestion, totalQuestions, reason, learningLanguageName, session.nativeLanguage);
 
   try {
+    // Generate detailed feedback for answered questions only
+    const answeredQuestions = session.quiz.questions.slice(0, currentQuestion);
+    const detailedFeedback = await generateDetailedQuizFeedback(
+      answeredQuestions,
+      session.learningLanguage,
+      session.nativeLanguage
+    );
+
+    // Create shortened feedback for early end
+    const comprehensiveFeedback = `
+${summaryText} ...
+Quick Analysis: ${detailedFeedback.overallScore} out of 100 based on answered questions. ...
+${detailedFeedback.feedback} ...
+Keep working on: ${detailedFeedback.strengthsAndWeaknesses.weaknesses[0] || 'Continue practicing'}
+    `.trim();
+
     // Generate summary audio
     const summaryAudio = await generateAndSendTTS(
       ws,
-      summaryText,
+      comprehensiveFeedback,
       session.nativeLanguage,
       "explanation"
     );
 
-    // Send early end summary
+    // Send early end summary with detailed feedback
     ws.send(JSON.stringify({
       type: "quiz_ended_early",
       reason,
@@ -153,7 +304,19 @@ export const endQuizEarly = async (
       totalQuestions,
       summary: summaryText,
       summaryAudioUrl: summaryAudio,
-      questions: session.quiz.questions.slice(0, currentQuestion), // Only answered questions
+      questions: answeredQuestions, // Only answered questions
+      // Include detailed feedback for answered questions
+      detailedFeedback: {
+        pronunciationScore: detailedFeedback.pronunciationScore,
+        grammarScore: detailedFeedback.grammarScore,
+        vocabularyScore: detailedFeedback.vocabularyScore,
+        comprehensionScore: detailedFeedback.comprehensionScore,
+        overallScore: detailedFeedback.overallScore,
+        feedback: detailedFeedback.feedback,
+        strengths: detailedFeedback.strengthsAndWeaknesses.strengths,
+        weaknesses: detailedFeedback.strengthsAndWeaknesses.weaknesses,
+        recommendations: detailedFeedback.strengthsAndWeaknesses.recommendations
+      }
     }));
 
     // Reset quiz state

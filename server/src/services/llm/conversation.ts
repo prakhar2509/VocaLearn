@@ -102,7 +102,30 @@ IMPORTANT LANGUAGE RULES:
 - Put feedback/corrections in the learning language (${learningLanguage})
 - Put explanations in the native language (${nativeLanguage})
 
-- For 'echo' mode: If the input is incorrect, provide ONLY the corrected version in ${learningLanguage} in the "correction" field - no additional text, affirmations, or suggestions. If correct, leave the "correction" field empty or put the original text. Put explanations in the "explanation" field (in ${nativeLanguage}).
+- For 'echo' mode: 
+    • If the input is incorrect, provide ONLY the corrected version in ${learningLanguage} in the "correction" field - no additional text, affirmations, or suggestions. 
+    • If correct, leave the "correction" field empty or put the original text. 
+    • Put comprehensive, educational explanations in the "explanation" field (in ${nativeLanguage}):
+      - Start with WHY the correction was needed (specific grammar rules, pronunciation patterns, cultural context)
+      - Provide the underlying linguistic principle or rule being applied
+      - Give 2-3 concrete examples of correct usage in different contexts
+      - Include memory aids, mnemonics, or patterns to help retention
+      - Reference related grammar structures, word families, or language patterns
+      - Add cultural or usage notes when relevant (formal vs informal, regional variations)
+      - Provide tips for avoiding similar mistakes in the future
+      - Make explanations pedagogically rich and insightful, focusing on learning principles
+      - If the input was correct, explain what they did well and why it demonstrates good language mastery
+    • ALSO provide detailed feedback analysis with scores (0-100) for:
+      - pronunciationScore: How well the user likely pronounced based on transcription quality
+      - grammarScore: Grammar correctness and sentence structure
+      - vocabularyScore: Word choice and meaning understanding
+      - fluencyScore: Natural flow and speech patterns
+      - overallScore: Combined performance assessment
+    • Include comprehensive feedback with:
+      - 2-3 specific strengths observed with explanations of why they're good
+      - 1-2 main areas for improvement with actionable steps
+      - 2-3 specific practice recommendations with concrete exercises or resources
+    • Keep all feedback encouraging but substantive and actionable
 
 - For 'dialogue' mode: Generate a natural conversational response in ${learningLanguage} that continues the dialogue.
     ${scenarioContext ? 'SCENARIO MODE: You are role-playing in this scenario. Stay completely in character and respond as the role described in the scenario context. Make the conversation immersive and realistic. Keep the conversation flowing naturally - share information about yourself, react to what the user said, make comments, and sometimes ask follow-up questions.' : ''}
@@ -127,7 +150,16 @@ IMPORTANT LANGUAGE RULES:
     • Make the conversation feel continuous and connected, not like separate question-answer pairs
     
     - Store this conversational response in the "correction" field (in ${learningLanguage}) - this field name is just for technical reasons, it contains your conversation response
-    - Only use the "explanation" field if there were serious grammar errors that completely changed the meaning - and explanations must be in ${nativeLanguage}
+    - For the "explanation" field: Only provide comprehensive language insights if there were significant errors that affected communication (in ${nativeLanguage}):
+      - Focus on errors that changed the intended meaning or made communication unclear
+      - Explain complex grammar concepts that caused confusion with detailed linguistic analysis
+      - Provide cultural, contextual, or pragmatic insights about language usage
+      - Offer advanced tips for more natural, idiomatic expression
+      - Include examples of how native speakers would express the same idea
+      - Reference regional variations, formality levels, or social contexts when relevant
+      - Give specific practice suggestions for mastering difficult concepts
+      - Keep explanations highly educational and supportive, never discouraging
+      - Leave explanation empty for minor errors or correct usage that doesn't warrant detailed analysis
     - Do NOT correct punctuation marks like periods (।) - these are not important in spoken dialogue
     ${scenarioContext ? '- Remember: You are the character in the scenario having a real conversation, not a teacher! Stay in character!' : ''}
     - Make the conversation feel natural, continuous, and perpetual with varied response types
@@ -141,14 +173,58 @@ IMPORTANT LANGUAGE RULES:
     - Pronunciation intent (based on transcription)
     - Semantic correctness of the response
     
-    For quiz mode, put your feedback in the "correction" field (in ${learningLanguage}) and explanation in the "explanation" field (in ${nativeLanguage}):
-    - If correct: Put "Correct!" or "सही!" or "¡Correcto!" (in ${learningLanguage}) with brief praise in the "correction" field. Leave "explanation" empty or give brief encouragement in ${nativeLanguage}.
-    - If partially correct: Put the complete correct answer in ${learningLanguage} in the "correction" field, and explain what was missing in ${nativeLanguage} in the "explanation" field.
-    - If incorrect: Put the correct answer in ${learningLanguage} in the "correction" field and explain the mistake in ${nativeLanguage} in the "explanation" field, focusing on meaning and grammar, NOT punctuation.
+    For quiz mode, put your feedback in the "correction" field (in ${learningLanguage}) and comprehensive explanation in the "explanation" field (in ${nativeLanguage}):
+    - If correct: Put "Correct!" or "सही!" or "¡Correcto!" (in ${learningLanguage}) with brief praise in the "correction" field. In "explanation", provide detailed positive reinforcement:
+      * Highlight specific aspects they mastered (grammar structures, vocabulary choices, pronunciation patterns)
+      * Explain the language concepts they demonstrated correctly with linguistic analysis
+      * Provide additional context, related rules, or advanced applications
+      * Reference similar patterns they can apply in other contexts
+      * Acknowledge the difficulty level and celebrate the achievement
+      * Suggest next steps for continued learning and skill development
+    - If partially correct: Put the complete correct answer in ${learningLanguage} in the "correction" field, and in "explanation" provide comprehensive analysis:
+      * Clearly acknowledge what parts were correct and why they demonstrate good understanding
+      * Explain what was missing with detailed linguistic reasoning
+      * Provide the underlying grammar rules, vocabulary patterns, or pronunciation principles
+      * Give multiple examples of correct usage in various contexts and registers
+      * Offer specific, actionable strategies for improvement with practice exercises
+      * Connect the concept to broader language learning principles
+    - If incorrect: Put the correct answer in ${learningLanguage} in the "correction" field and in "explanation" provide thorough educational feedback:
+      * Explain the correct answer comprehensively with detailed reasoning
+      * Identify the specific error type (grammar, vocabulary, pronunciation, meaning) and why it occurred
+      * Provide the underlying language rules, patterns, or principles with examples
+      * Give multiple examples in different contexts to reinforce understanding
+      * Suggest specific practice methods, exercises, and learning resources
+      * Connect to broader language concepts and provide scaffolding for future learning
+      * Focus on growth opportunities and learning strategies, not just corrections
 
 REMEMBER: ALL explanations must be written in ${nativeLanguage}, NOT in ${learningLanguage}!
 
 Always return a **valid JSON** response like this:
+
+For ECHO mode:
+{
+  "correction": "...",
+  "explanation": "...",
+  "detailedFeedback": {
+    "pronunciationScore": <0-100>,
+    "grammarScore": <0-100>,
+    "vocabularyScore": <0-100>,
+    "fluencyScore": <0-100>,
+    "overallScore": <0-100>,
+    "feedback": "<brief encouraging summary in ${nativeLanguage}>",
+    "strengths": ["<strength 1>", "<strength 2>"],
+    "weaknesses": ["<weakness 1>", "<weakness 2>"],
+    "recommendations": ["<tip 1>", "<tip 2>"]
+  }
+}
+
+For DIALOGUE mode:
+{
+  "correction": "...",
+  "explanation": ""
+}
+
+For QUIZ mode:
 {
   "correction": "...",
   "explanation": "..."
@@ -157,13 +233,14 @@ Always return a **valid JSON** response like this:
 FINAL REMINDER: 
 - "correction" field = ${learningLanguage}
 - "explanation" field = ${nativeLanguage}
+- Echo mode MUST include detailedFeedback object with scores and analysis
 `;
 
   try {
     const responseText = await callLLM(prompt);
     console.log("🤖 LLM Raw response:", responseText);
     
-    let correction, explanation;
+    let correction, explanation, detailedFeedback;
     try {
       const parsed = JSON.parse(responseText);
       
@@ -177,6 +254,21 @@ FINAL REMINDER:
         // Normal response format with correction/explanation fields
         correction = parsed.correction;
         explanation = parsed.explanation;
+        
+        // Extract detailed feedback if present (for echo mode)
+        if (parsed.detailedFeedback && mode === 'echo') {
+          detailedFeedback = {
+            pronunciationScore: Math.max(0, Math.min(100, parsed.detailedFeedback.pronunciationScore || 0)),
+            grammarScore: Math.max(0, Math.min(100, parsed.detailedFeedback.grammarScore || 0)),
+            vocabularyScore: Math.max(0, Math.min(100, parsed.detailedFeedback.vocabularyScore || 0)),
+            fluencyScore: Math.max(0, Math.min(100, parsed.detailedFeedback.fluencyScore || 0)),
+            overallScore: Math.max(0, Math.min(100, parsed.detailedFeedback.overallScore || 0)),
+            feedback: parsed.detailedFeedback.feedback || "Good effort!",
+            strengths: parsed.detailedFeedback.strengths || ["You're practicing"],
+            weaknesses: parsed.detailedFeedback.weaknesses || ["Keep improving"],
+            recommendations: parsed.detailedFeedback.recommendations || ["Continue practicing"]
+          };
+        }
         
         // Handle legacy response formats that might have different field names
         if (!correction && parsed.response) {
@@ -195,12 +287,19 @@ FINAL REMINDER:
       explanation = "The AI response was not in the expected format. Please try again.";
     }
     
-    return {
+    const response: LLMResponse = {
       correction: correction || "No correction provided",
       explanation: explanation || "No explanation provided",
       correctionVoiceId: getVoiceId(learningLanguage),
       explanationVoiceId: getVoiceId(nativeLanguage),
     };
+
+    // Add detailed feedback if available
+    if (detailedFeedback) {
+      response.detailedFeedback = detailedFeedback;
+    }
+
+    return response;
   } catch (error) {
     throw new Error(`LLM processing failed: ${(error as Error).message}`);
   }
