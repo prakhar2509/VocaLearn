@@ -1,153 +1,75 @@
 import express from "express";
 import http from "http";
 import cors from "cors";
+import path from "path";
 import { WebSocketServer, WebSocket } from "ws";
-import { config } from "./config";
-import { processAudioStream } from "./asr";
-import { generateResponse } from "./llm";
-import { generateAndSendTTS } from "./murf";
-import { Language } from "@google/genai";
+import { config } from "./utils/config";
+import { handleConnection, handleMessage, handleDisconnection } from "./handlers/websocket-handler";
+import { startPracticeSession, getSupportedLanguages } from "./handlers/routes";
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// API routes
+app.get('/languages', getSupportedLanguages);
+app.post('/api/practice/start', startPracticeSession);
+
+// Health check
+app.get('/', (req, res) => {
+  res.json({
+    service: 'VocaLearn Backend',
+    version: '2.0.0',
+    status: 'running',
+    endpoints: ['/languages', '/api/practice/start', '/test-html/']
+  });
+});
+
+// Serve test HTML files
+app.use('/test-html', express.static(path.join(__dirname, '..', 'test-html')));
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-interface ClientSession {
-  audioChunks: Buffer[];
-  learningLanguage: string;
-  nativeLanguage: string;
-  mode: string;
-}
-
-const sessions = new Map<WebSocket, ClientSession>();
-
-wss.on("connection", (ws, req) => {
-  console.log("Client Connected!");
-  const params = new URLSearchParams(req.url?.split("?")[1]);
-  const learningLanguage = params.get("learningLanguage") || "es-ES";
-  const nativeLanguage = params.get("nativeLanguage") || "en-US";
-  const mode = params.get("mode") || "echo";
-
-  sessions.set(ws, {
-    audioChunks: [],
-    learningLanguage,
-    nativeLanguage,
-    mode,
-  });
-
-  const timeoutId = setTimeout(() => {
-    if (sessions.has(ws)) {
+// WebSocket connection handling
+wss.on("connection", async (ws, req) => {
+  await handleConnection(ws, req);
+  
+  // Timeout management
+  let timeoutId = setTimeout(() => {
+    if (ws.readyState === WebSocket.OPEN) {
       console.log('WebSocket connection timed out');
       ws.send(JSON.stringify({ error: 'Connection timed out' }));
       ws.close();
     }
-  }, 30000); 
+  }, 60000);
 
+  // Message handling
   ws.on("message", async (data: Buffer) => {
-    
     try {
-      const session = sessions.get(ws);
-      if (!session) {
-        ws.send(JSON.stringify({ error: "Session not found" }));
-        return;
-      }
-
-
-      if (data.toString().startsWith("{")) {
-        const message = JSON.parse(data.toString());
-        if (message.end === true) {
-          const transcription = await processAudioStream(
-            session.audioChunks,
-            session.learningLanguage
-          );
-            console.log("✅ Transcription:", transcription.text);
-          clearTimeout(timeoutId)
-          ws.send(
-            JSON.stringify({
-              transcription: transcription.text,
-              language: session.learningLanguage,
-            })
-          );
-          
-          const response = await generateResponse(
-            transcription.text,
-            session.learningLanguage,
-            session.nativeLanguage,
-            session.mode
-          );
-            console.log("✅ Response:", response);
-          ws.send(
-            JSON.stringify({
-              correction: response.correction,
-              explanation: response.explanation,
-              correctionLanguage: session.learningLanguage,
-              explanationLanguage: session.nativeLanguage,
-            })
-          );
-
-          const correctionAudio = await generateAndSendTTS(
-            ws,
-            response.correction,
-            session.learningLanguage,
-            "correction"
-          );
-          const explanationAudio = await generateAndSendTTS(
-            ws,
-            response.explanation,
-            session.nativeLanguage,
-            "explanation"
-          );
-
-          ws.send(
-            JSON.stringify({
-              type: "done",
-              done : true,
-               audioCorrectionUrl: correctionAudio,
-               audioExplanationUrl: explanationAudio,
-            })
-          )
-
-          session.audioChunks = []; 
+      // Reset timeout on activity
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          console.log('WebSocket connection timed out');
+          ws.send(JSON.stringify({ error: 'Connection timed out' }));
+          ws.close();
         }
-      } else {
-        if (data.length > 0) {
-          session.audioChunks.push(data);
-        } else {
-          ws.send(JSON.stringify({ error: "Empty audio data" }));
-        }
-      }
+      }, 60000);
+
+      await handleMessage(ws, data);
     } catch (error) {
-      ws.send(
-        JSON.stringify({
-          error: `Processing failed: ${(error as Error).message}`,
-        })
-      );
+      ws.send(JSON.stringify({
+        error: `Processing failed: ${(error as Error).message}`,
+      }));
     }
   });
 
+  // Disconnection handling
   ws.on("close", () => {
-    clearTimeout(timeoutId)
-    sessions.delete(ws);
-    console.log("Client Disconnected");
-  });
-});
-
-app.post("/api/practice/start", (req, res): any => {
-  const { mode, learningLanguage, nativeLanguage } = req.body;
-  if (!["echo", "dialogue", "quiz"].includes(mode)) {
-    return res.status(400).json({ error: "Invalid mode" });
-  }
-  if (!learningLanguage || !nativeLanguage) {
-    return res.status(400).json({ error: "Missing languages" });
-  }
-  return res.json({
-    sessionId: Date.now().toString(),
-    mode,
-    learningLanguage,
-    nativeLanguage,
+    clearTimeout(timeoutId);
+    handleDisconnection(ws);
   });
 });
 

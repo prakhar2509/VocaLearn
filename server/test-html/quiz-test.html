@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>🧪 VocaLearn Quiz Test</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      button {
+        margin-right: 10px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .primary-btn {
+        background: #007bff;
+        color: white;
+      }
+      .secondary-btn {
+        background: #6c757d;
+        color: white;
+      }
+      .danger-btn {
+        background: #dc3545;
+        color: white;
+      }
+      .success-btn {
+        background: #28a745;
+        color: white;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      #status {
+        margin-top: 10px;
+        font-weight: bold;
+        padding: 10px;
+        border-radius: 5px;
+        background: #f8f9fa;
+      }
+      .quiz-section {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background: #f8f9fa;
+      }
+      .quiz-question {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .quiz-feedback {
+        background: #f3e5f5;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .quiz-summary {
+        background: #e8f5e8;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .score {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2e7d32;
+      }
+      .quiz-controls {
+        margin: 15px 0;
+      }
+      .audio-indicator {
+        display: inline-block;
+        margin-left: 10px;
+        color: #28a745;
+      }
+      .question-progress {
+        background: #e9ecef;
+        height: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 10px 0;
+      }
+      .progress-bar {
+        background: #007bff;
+        height: 100%;
+        transition: width 0.3s ease;
+      }
+      .config-section {
+        background: #fff3cd;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 VocaLearn Quiz Test</h1>
+
+    <!-- Quiz Configuration -->
+    <div class="config-section">
+      <h3>📋 Quiz Configuration</h3>
+      <label for="questions">Number of Questions (1-20):</label>
+      <input type="number" id="questions" min="1" max="20" value="5" style="margin: 0 10px; padding: 5px;">
+      
+      <label for="topic">Topic:</label>
+      <select id="topic" style="margin: 0 10px; padding: 5px;">
+        <option value="general">General</option>
+        <option value="grammar">Grammar</option>
+        <option value="vocabulary">Vocabulary</option>
+        <option value="culture">Culture</option>
+        <option value="conversation">Conversation</option>
+      </select>
+      
+      <label for="learningLang">Learning Language:</label>
+      <select id="learningLang" style="margin: 0 10px; padding: 5px;">
+        <option value="es-ES">Spanish</option>
+        <option value="fr-FR">French</option>
+        <option value="en-US">English</option>
+        <option value="hi-IN">Hindi</option>
+        <option value="ja-JP">Japanese</option>
+        <option value="it-IT">Italian</option>
+        <option value="de-DE">German</option>
+      </select>
+      
+      <label for="nativeLang">Native Language (for explanations):</label>
+      <select id="nativeLang" style="margin: 0 10px; padding: 5px;">
+        <option value="en-US">English</option>
+        <option value="es-ES">Spanish</option>
+        <option value="fr-FR">French</option>
+        <option value="hi-IN">Hindi</option>
+        <option value="ja-JP">Japanese</option>
+        <option value="it-IT">Italian</option>
+        <option value="de-DE">German</option>
+      </select>
+    </div>
+
+    <!-- Main Controls -->
+    <div>
+      <button id="startQuiz" class="primary-btn">🧪 Start Quiz</button>
+      <button id="answerQuestion" class="success-btn" disabled>🎤 Record Answer</button>
+      <button id="stopRecording" class="secondary-btn" disabled>⏹️ Stop Recording</button>
+      <button id="skipQuestion" class="secondary-btn" disabled>⏭️ Skip Question</button>
+      <button id="continueQuiz" class="primary-btn" disabled style="display: none;">➡️ Continue to Next Question</button>
+      <button id="endQuiz" class="danger-btn" disabled>🛑 End Quiz</button>
+    </div>
+
+    <p id="status">🔴 Ready to start quiz</p>
+
+    <!-- Progress Bar -->
+    <div id="progressSection" style="display: none;">
+      <div class="question-progress">
+        <div id="progressBar" class="progress-bar" style="width: 0%;"></div>
+      </div>
+      <p id="progressText">Question 0 of 0</p>
+    </div>
+
+    <!-- Quiz Question -->
+    <div id="questionSection" class="quiz-section" style="display: none;">
+      <h2>📝 Current Question:</h2>
+      <div id="currentQuestion" class="quiz-question">
+        Waiting for question...
+      </div>
+      <div style="margin-top: 10px;">
+        <button id="playQuestionAudio" class="secondary-btn" disabled>🔊 Replay Question Audio</button>
+        <button id="skipAudio" class="secondary-btn" disabled>⏭️ Skip Audio</button>
+      </div>
+    </div>
+
+    <!-- Quiz Feedback -->
+    <div id="feedbackSection" class="quiz-section" style="display: none;">
+      <h2>💭 Feedback:</h2>
+      <div id="feedbackContent" class="quiz-feedback">
+        Waiting for feedback...
+      </div>
+      <div id="explanationContent" style="margin-top: 10px;">
+        <!-- Explanation will appear here -->
+      </div>
+      <button id="playFeedbackAudio" class="secondary-btn" disabled>🔊 Replay Feedback Audio</button>
+      <button id="playExplanationAudio" class="secondary-btn" disabled>🔊 Replay Explanation Audio</button>
+      <button id="skipFinalAudio" class="danger-btn" style="display: none;">⏭️ Skip to Results</button>
+    </div>
+
+    <!-- Quiz Summary -->
+    <div id="summarySection" class="quiz-section" style="display: none;">
+      <h2>🎉 Quiz Complete!</h2>
+      <div id="summaryContent" class="quiz-summary">
+        Quiz summary will appear here...
+      </div>
+      <button id="playSummaryAudio" class="secondary-btn" disabled>🔊 Replay Summary Audio</button>
+      <button id="reviewAnswers" class="primary-btn" style="margin-top: 10px;">📊 Review All Answers</button>
+    </div>
+
+    <!-- Answer Review Modal -->
+    <div id="reviewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+      <div style="background: white; margin: 50px auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 10px; max-height: 80%; overflow-y: auto;">
+        <h3>📊 Quiz Review</h3>
+        <div id="reviewContent"></div>
+        <button onclick="closeReviewModal()" class="secondary-btn" style="margin-top: 15px;">Close</button>
+      </div>
+    </div>
+
+    <script type="module">
+      let ws;
+      let audioCtx;
+      let workletNode;
+      let audioStream;
+      let currentQuestionAudio = null;
+      let currentFeedbackAudio = null;
+      let currentExplanationAudio = null;
+      let currentSummaryAudio = null;
+      let quizData = {
+        questions: [],
+        currentScore: 0,
+        totalQuestions: 0
+      };
+
+      // Elements
+      const startQuizBtn = document.getElementById("startQuiz");
+      const answerBtn = document.getElementById("answerQuestion");
+      const stopRecordingBtn = document.getElementById("stopRecording");
+      const skipBtn = document.getElementById("skipQuestion");
+      const continueBtn = document.getElementById("continueQuiz");
+      const endQuizBtn = document.getElementById("endQuiz");
+      const status = document.getElementById("status");
+      
+      const progressSection = document.getElementById("progressSection");
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+      
+      const questionSection = document.getElementById("questionSection");
+      const currentQuestion = document.getElementById("currentQuestion");
+      const playQuestionAudio = document.getElementById("playQuestionAudio");
+      const skipAudio = document.getElementById("skipAudio");
+      
+      const feedbackSection = document.getElementById("feedbackSection");
+      const feedbackContent = document.getElementById("feedbackContent");
+      const explanationContent = document.getElementById("explanationContent");
+      const playFeedbackAudio = document.getElementById("playFeedbackAudio");
+      const playExplanationAudio = document.getElementById("playExplanationAudio");
+      const skipFinalAudio = document.getElementById("skipFinalAudio");
+      
+      const summarySection = document.getElementById("summarySection");
+      const summaryContent = document.getElementById("summaryContent");
+      const playSummaryAudio = document.getElementById("playSummaryAudio");
+
+      // Configuration
+      function getQuizConfig() {
+        const questions = document.getElementById("questions").value;
+        const topic = document.getElementById("topic").value;
+        const learningLang = document.getElementById("learningLang").value;
+        const nativeLang = document.getElementById("nativeLang").value;
+        
+        return { questions, topic, learningLang, nativeLang };
+      }
+
+      // Audio playback functions
+      function playAudio(url) {
+        return new Promise((resolve, reject) => {
+          const audio = new Audio(url);
+          audio.onended = resolve;
+          audio.onerror = reject;
+          audio.play().catch(reject);
+        });
+      }
+
+      // Quiz control functions
+      startQuizBtn.onclick = async () => {
+        const config = getQuizConfig();
+        const wsUrl = `ws://localhost:4001?learningLanguage=${config.learningLang}&nativeLanguage=${config.nativeLang}&mode=quiz&questions=${config.questions}&topic=${config.topic}`;
+        
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = "arraybuffer";
+
+        ws.onopen = () => {
+          status.textContent = "🟢 Connected - Starting quiz...";
+          startQuizBtn.disabled = true;
+          endQuizBtn.disabled = false;
+          
+          // Reset UI
+          questionSection.style.display = "none";
+          feedbackSection.style.display = "none";
+          summarySection.style.display = "none";
+          progressSection.style.display = "block";
+          
+          quizData = { questions: [], currentScore: 0, totalQuestions: parseInt(config.questions) };
+        };
+
+        ws.onmessage = (msg) => {
+          const data = JSON.parse(msg.data);
+          console.log("📨 Quiz message:", data);
+          handleQuizMessage(data);
+        };
+
+        ws.onerror = (err) => {
+          console.error("❌ WebSocket error:", err);
+          status.textContent = "⚠️ Connection error";
+        };
+
+        ws.onclose = () => {
+          status.textContent = "🔴 Connection closed";
+          resetUI();
+        };
+      };
+
+      function handleQuizMessage(data) {
+        if (data.type === "quiz_question") {
+          handleQuizQuestion(data);
+        } else if (data.type === "quiz_feedback") {
+          handleQuizFeedback(data);
+        } else if (data.type === "quiz_summary") {
+          handleQuizSummary(data);
+        } else if (data.type === "quiz_ended_early") {
+          handleQuizEndedEarly(data);
+        } else if (data.type === "transcription_failed") {
+          handleTranscriptionFailed(data);
+        } else if (data.error) {
+          status.textContent = "⚠️ Error: " + data.error;
+          console.error("❌ Quiz error:", data.error);
+        }
+      }
+
+      function handleQuizQuestion(data) {
+        console.log("📥 Received quiz question:", data);
+        status.textContent = "🎯 Question received - Listen and answer!";
+        
+        // Update progress
+        const progress = (data.questionNumber / data.totalQuestions) * 100;
+        progressBar.style.width = progress + "%";
+        progressText.textContent = `Question ${data.questionNumber} of ${data.totalQuestions}`;
+        
+        // Show question
+        questionSection.style.display = "block";
+        feedbackSection.style.display = "none";
+        
+        // Set question text with fallback
+        const questionText = data.question || "No question provided";
+        currentQuestion.textContent = questionText;
+        console.log("📝 Displaying question:", questionText);
+        
+        // Store question audio
+        currentQuestionAudio = data.questionAudioUrl;
+        playQuestionAudio.disabled = false;
+        skipAudio.disabled = false;
+        
+        // Enable answer recording
+        answerBtn.disabled = false;
+        skipBtn.disabled = false;
+        
+        // Reset recording and processing states for new question
+        isRecording = false;
+        isProcessingAnswer = false;
+        
+        // Auto-play question audio
+        if (data.questionAudioUrl) {
+          playAudio(data.questionAudioUrl).then(() => {
+            status.textContent = "🎤 Ready to record your answer!";
+          }).catch(err => {
+            console.error("Audio playback failed:", err);
+            status.textContent = "🎤 Ready to record your answer! (Audio failed)";
+          });
+        }
+      }
+
+      function handleQuizFeedback(data) {
+        status.textContent = data.isCorrect ? "✅ Correct!" : "❌ Incorrect";
+        
+        // Update score display
+        quizData.currentScore = data.score;
+        
+        // Show feedback
+        feedbackSection.style.display = "block";
+        feedbackContent.innerHTML = `
+          <div style="margin-bottom: 10px;">
+            <strong>${data.isCorrect ? "✅ Correct!" : "❌ Incorrect"}</strong>
+          </div>
+          <div>${data.feedback}</div>
+        `;
+        
+        if (data.explanation) {
+          explanationContent.innerHTML = `
+            <div style="padding: 10px; background: #fff3cd; border-radius: 5px; margin-top: 10px;">
+              <strong>📚 Explanation:</strong><br>
+              ${data.explanation}
+            </div>
+          `;
+        }
+        
+        // Store audio URLs
+        currentFeedbackAudio = data.feedbackAudioUrl;
+        currentExplanationAudio = data.explanationAudioUrl;
+        
+        playFeedbackAudio.disabled = !data.feedbackAudioUrl;
+        playExplanationAudio.disabled = !data.explanationAudioUrl;
+        
+        // Show skip button only for the final question
+        if (!data.hasMoreQuestions) {
+          skipFinalAudio.style.display = "inline-block";
+          status.textContent = "🎵 Playing final feedback - or skip to see results";
+        } else {
+          skipFinalAudio.style.display = "none";
+        }
+        
+        // Disable answer controls
+        answerBtn.disabled = true;
+        stopRecordingBtn.disabled = true;
+        skipBtn.disabled = true;
+        
+        // Auto-play feedback
+        const playSequence = async () => {
+          try {
+            if (data.feedbackAudioUrl) {
+              await playAudio(data.feedbackAudioUrl);
+            }
+            if (data.explanationAudioUrl) {
+              await playAudio(data.explanationAudioUrl);
+            }
+            
+            // Show continue button if there are more questions
+            if (data.hasMoreQuestions) {
+              status.textContent = "🎵 Audio finished - Click continue for next question";
+              continueBtn.disabled = false;
+              continueBtn.style.display = "inline-block";
+            } else {
+              // This was the final question - notify server that audio is completed
+              status.textContent = "🎵 Final audio completed - Showing results...";
+              console.log("🎯 Final question audio completed - requesting quiz summary");
+              ws.send(JSON.stringify({ action: "final_audio_completed" }));
+            }
+          } catch (err) {
+            console.error("Audio playback failed:", err);
+            // Still show continue button even if audio fails
+            if (data.hasMoreQuestions) {
+              status.textContent = "📋 Ready for next question (audio failed)";
+              continueBtn.disabled = false;
+              continueBtn.style.display = "inline-block";
+            } else {
+              // This was the final question - notify server that we're ready for results (even if audio failed)
+              status.textContent = "📋 Audio failed - Showing results...";
+              console.log("🎯 Final question audio failed - requesting quiz summary");
+              ws.send(JSON.stringify({ action: "final_audio_completed" }));
+            }
+          }
+        };
+        
+        playSequence();
+      }
+
+      function handleQuizSummary(data) {
+        status.textContent = "🎉 Quiz completed!";
+        
+        // Hide other sections
+        questionSection.style.display = "none";
+        feedbackSection.style.display = "none";
+        
+        // Show summary
+        summarySection.style.display = "block";
+        summaryContent.innerHTML = `
+          <div class="score">${data.score}/${data.totalQuestions}</div>
+          <div style="font-size: 18px; margin: 10px 0;">${data.percentage}% correct</div>
+          <div>${data.summary}</div>
+        `;
+        
+        // Store summary audio
+        currentSummaryAudio = data.summaryAudioUrl;
+        playSummaryAudio.disabled = !data.summaryAudioUrl;
+        
+        // Store quiz data for review
+        quizData.questions = data.questions;
+        
+        // Disable quiz controls
+        endQuizBtn.disabled = true;
+        
+        // Auto-play summary
+        if (data.summaryAudioUrl) {
+          playAudio(data.summaryAudioUrl).catch(err => {
+            console.error("Summary audio playback failed:", err);
+          });
+        }
+      }
+
+      function handleQuizEndedEarly(data) {
+        status.textContent = "🛑 Quiz ended early";
+        
+        summarySection.style.display = "block";
+        summaryContent.innerHTML = `
+          <div><strong>Quiz ended early</strong></div>
+          <div class="score">${data.score}/${data.questionsAnswered}</div>
+          <div>${data.summary}</div>
+        `;
+        
+        currentSummaryAudio = data.summaryAudioUrl;
+        playSummaryAudio.disabled = !data.summaryAudioUrl;
+        
+        quizData.questions = data.questions;
+        endQuizBtn.disabled = true;
+      }
+
+      function handleTranscriptionFailed(data) {
+        console.log("⚠️ Transcription failed:", data.message);
+        status.textContent = "🔄 " + data.message;
+        
+        // Reset recording states to allow retry
+        isRecording = false;
+        isProcessingAnswer = false;
+        
+        // Re-enable answer button for retry
+        answerBtn.disabled = false;
+        stopRecordingBtn.disabled = true;
+        skipBtn.disabled = false;
+        
+        // Show retry instructions with count if available
+        const retryInfo = data.retryCount ? ` (${data.retryCount}/${data.maxRetries})` : '';
+        status.innerHTML = `
+          🔄 ${data.message}<br>
+          <small style="color: #666;">Try speaking louder, clearer, or closer to the microphone.${retryInfo}</small>
+        `;
+        
+        // If near max retries, show additional help
+        if (data.retryCount >= 2) {
+          status.innerHTML += `<br><small style="color: #ff6b6b;">Tip: Ensure your microphone is working and there's no background noise.</small>`;
+        }
+      }
+
+      // Recording functions
+      answerBtn.onclick = async () => {
+        if (isRecording) {
+          console.log("⚠️ Already recording, ignoring click");
+          return;
+        }
+        
+        isRecording = true;
+        isProcessingAnswer = false; // Reset processing flag when starting new recording
+        
+        try {
+          status.textContent = "🎤 Recording your answer...";
+          
+          // Get microphone access
+          audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: { sampleRate: 16000, channelCount: 1 }
+          });
+
+          audioCtx = new AudioContext({ sampleRate: 16000 });
+
+          // Create audio worklet
+          await audioCtx.audioWorklet.addModule(
+            URL.createObjectURL(
+              new Blob([`
+                class PCMWorkletProcessor extends AudioWorkletProcessor {
+                  process(inputs) {
+                    const input = inputs[0][0];
+                    if (!input) return true;
+                    const buffer = new ArrayBuffer(input.length * 2);
+                    const view = new DataView(buffer);
+                    for (let i = 0; i < input.length; i++) {
+                      let sample = Math.max(-1, Math.min(1, input[i]));
+                      sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                      view.setInt16(i * 2, sample, true);
+                    }
+                    this.port.postMessage(buffer);
+                    return true;
+                  }
+                }
+                registerProcessor('pcm-worklet', PCMWorkletProcessor);
+              `], { type: "application/javascript" })
+            )
+          );
+
+          const source = audioCtx.createMediaStreamSource(audioStream);
+          workletNode = new AudioWorkletNode(audioCtx, "pcm-worklet");
+
+          workletNode.port.onmessage = (event) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(event.data);
+            }
+          };
+
+          source.connect(workletNode);
+
+          answerBtn.disabled = true;
+          stopRecordingBtn.disabled = false;
+
+        } catch (err) {
+          console.error("Microphone access failed:", err);
+          status.textContent = "⚠️ Microphone access failed";
+          isRecording = false; // Reset recording flag on error
+        }
+      };
+
+      let isRecording = false;
+      let isProcessingAnswer = false;
+
+      stopRecordingBtn.onclick = () => {
+        if (isProcessingAnswer) {
+          console.log("⚠️ Already processing answer, ignoring click");
+          return;
+        }
+        
+        isProcessingAnswer = true;
+        isRecording = false; // Reset recording flag
+        
+        if (audioStream) {
+          audioStream.getTracks().forEach(track => track.stop());
+        }
+        if (audioCtx) {
+          audioCtx.close();
+        }
+        
+        ws.send(JSON.stringify({ end: true }));
+        
+        status.textContent = "⏳ Processing your answer...";
+        stopRecordingBtn.disabled = true;
+        
+        // Reset flag after a delay to prevent rapid clicks
+        setTimeout(() => {
+          isProcessingAnswer = false;
+        }, 2000);
+      };
+
+      skipBtn.onclick = () => {
+        ws.send(JSON.stringify({ action: "skip_question" }));
+        status.textContent = "⏭️ Skipping question...";
+        skipBtn.disabled = true;
+      };
+
+      continueBtn.onclick = () => {
+        ws.send(JSON.stringify({ action: "next_question" }));
+        status.textContent = "⏳ Loading next question...";
+        continueBtn.disabled = true;
+        continueBtn.style.display = "none";
+        feedbackSection.style.display = "none";
+      };
+
+      endQuizBtn.onclick = () => {
+        if (confirm("Are you sure you want to end the quiz early?")) {
+          ws.send(JSON.stringify({ action: "end_quiz" }));
+          status.textContent = "🛑 Ending quiz...";
+        }
+      };
+
+      // Audio replay functions
+      playQuestionAudio.onclick = () => {
+        if (currentQuestionAudio) {
+          playAudio(currentQuestionAudio).catch(console.error);
+        }
+      };
+
+      skipAudio.onclick = () => {
+        status.textContent = "🎤 Ready to record your answer!";
+        answerBtn.disabled = false;
+        skipBtn.disabled = false;
+      };
+
+      playFeedbackAudio.onclick = () => {
+        if (currentFeedbackAudio) {
+          playAudio(currentFeedbackAudio).catch(console.error);
+        }
+      };
+
+      playExplanationAudio.onclick = () => {
+        if (currentExplanationAudio) {
+          playAudio(currentExplanationAudio).catch(console.error);
+        }
+      };
+
+      playSummaryAudio.onclick = () => {
+        if (currentSummaryAudio) {
+          playAudio(currentSummaryAudio).catch(console.error);
+        }
+      };
+
+      skipFinalAudio.onclick = () => {
+        console.log("🎯 User skipped final audio - requesting quiz summary");
+        status.textContent = "⏭️ Skipped to results...";
+        ws.send(JSON.stringify({ action: "skip_final_audio" }));
+      };
+
+      // Review functions
+      document.getElementById("reviewAnswers").onclick = () => {
+        showReviewModal();
+      };
+
+      function showReviewModal() {
+        const reviewContent = document.getElementById("reviewContent");
+        let html = "";
+        
+        quizData.questions.forEach((q, index) => {
+          html += `
+            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+              <div style="font-weight: bold; margin-bottom: 10px;">Question ${index + 1}:</div>
+              <div style="margin-bottom: 8px;">${q.question}</div>
+              <div style="margin-bottom: 8px;"><strong>Your Answer:</strong> ${q.userAnswer || 'No answer'}</div>
+              <div><strong>Expected:</strong> ${q.correctAnswer}</div>
+            </div>
+          `;
+        });
+        
+        reviewContent.innerHTML = html;
+        document.getElementById("reviewModal").style.display = "block";
+      }
+
+      window.closeReviewModal = () => {
+        document.getElementById("reviewModal").style.display = "none";
+      };
+
+      function resetUI() {
+        startQuizBtn.disabled = false;
+        answerBtn.disabled = true;
+        stopRecordingBtn.disabled = true;
+        skipBtn.disabled = true;
+        continueBtn.disabled = true;
+        continueBtn.style.display = "none";
+        endQuizBtn.disabled = true;
+        playQuestionAudio.disabled = true;
+        skipAudio.disabled = true;
+        skipFinalAudio.style.display = "none";
+        
+        progressSection.style.display = "none";
+        questionSection.style.display = "none";
+        feedbackSection.style.display = "none";
+        summarySection.style.display = "none";
+      }
+
+      // Initialize
+      resetUI();
+    </script>
+  </body>
+</html>

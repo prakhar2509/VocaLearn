@@ -2,7 +2,7 @@ import { generateResponse } from "../src/llm";
 
 jest.setTimeout(20000);
 
-describe('LLM gemini response', ()=> {
+describe('LLM Groq response', ()=> {
     it('should return correction and explaination for spanish sentence', async ()=> {
         const result = await generateResponse(
             'como, estas tu?',

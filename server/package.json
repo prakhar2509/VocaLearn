@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "npx ts-node-dev --respawn src/server.ts"
+    "build": "npx ts-node-dev --respawn src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -13,12 +13,13 @@
   "type": "commonjs",
   "dependencies": {
     "@deepgram/sdk": "^4.7.0",
-    "@google/genai": "^1.7.0",
     "assemblyai": "^4.13.3",
     "axios": "^1.10.0",
+    "bottleneck": "^2.19.5",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "groq-sdk": "^0.26.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.2",
     "wscat": "^6.1.0",
