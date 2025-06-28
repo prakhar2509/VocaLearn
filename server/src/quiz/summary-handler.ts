@@ -1,5 +1,4 @@
 import { WebSocket } from "ws";
-import { generateAndSendTTS } from "../murf";
 import { getLanguageName } from "../utils/languages";
 import { ClientSession } from "./types";
 import { callLLM } from "../services/llm/base";
@@ -50,12 +49,13 @@ Provide scores (0-100) for:
 4. COMPREHENSION: Question understanding and context awareness
 5. OVERALL: Combined performance
 
-Give brief, encouraging feedback in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}:
+Give brief, encouraging feedback ALL IN ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage} (MAX 200 WORDS total for all feedback):
 - Focus on 1-2 key strengths observed
 - Identify 1-2 main areas for improvement  
 - Suggest 1-2 specific practice recommendations
 
-Keep all feedback concise and actionable.
+CRITICAL: ALL TEXT must be in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage} language - including strengths, weaknesses, and recommendations.
+Keep all feedback concise, actionable, and under 200 words total.
 
 Respond in JSON format:
 {
@@ -66,9 +66,9 @@ Respond in JSON format:
   "overallScore": <0-100>,
   "feedback": "<brief encouraging summary in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>",
   "strengthsAndWeaknesses": {
-    "strengths": ["<key strength 1>", "<key strength 2>"],
-    "weaknesses": ["<main weakness 1>", "<main weakness 2>"], 
-    "recommendations": ["<specific tip 1>", "<specific tip 2>"]
+    "strengths": ["<key strength 1 in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>", "<key strength 2 in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>"],
+    "weaknesses": ["<main weakness 1 in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>", "<main weakness 2 in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>"], 
+    "recommendations": ["<specific tip 1 in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>", "<specific tip 2 in ${nativeLanguage === 'en-US' ? 'English' : nativeLanguage}>"]
   }
 }`;
 
@@ -93,17 +93,21 @@ Respond in JSON format:
     };
   } catch (error) {
     console.error("❌ Error generating detailed quiz feedback:", error);
+    
+    // Generate fallback feedback in native language
+    const fallbackFeedback = generateFallbackFeedback(nativeLanguage);
+    
     return {
       pronunciationScore: 50,
       grammarScore: 50,
       vocabularyScore: 50,
       comprehensionScore: 50,
       overallScore: 50,
-      feedback: "Great effort on completing the quiz! Keep practicing to improve your skills.",
+      feedback: fallbackFeedback.feedback,
       strengthsAndWeaknesses: {
-        strengths: ["You completed the quiz", "You're actively learning"],
-        weaknesses: ["Continue practicing regularly"],
-        recommendations: ["Review vocabulary", "Practice speaking more", "Take more quizzes"]
+        strengths: fallbackFeedback.strengths,
+        weaknesses: fallbackFeedback.weaknesses,
+        recommendations: fallbackFeedback.recommendations
       }
     };
   }
@@ -162,30 +166,17 @@ export const sendQuizSummary = async (
 
     console.log(`🎉 Quiz completed - Score: ${score}/${totalQuestions}`);
 
+    // Ensure questions array exists
+    const questions = session.quiz.questions || [];
+
     // Generate detailed feedback analysis
     const detailedFeedback = await generateDetailedQuizFeedback(
-      session.quiz.questions,
+      questions,
       session.learningLanguage,
       session.nativeLanguage
     );
 
-    // Create shortened comprehensive feedback text for audio (more concise)
-    const comprehensiveFeedback = `
-${summaryText} ... 
-Performance Analysis: ${detailedFeedback.overallScore} out of 100. ...
-${detailedFeedback.feedback} ...
-Top strength: ${detailedFeedback.strengthsAndWeaknesses.strengths[0] || 'Good effort'} ...
-Focus on: ${detailedFeedback.strengthsAndWeaknesses.weaknesses[0] || 'Continue practicing'} ...
-Next step: ${detailedFeedback.strengthsAndWeaknesses.recommendations[0] || 'Keep learning'}
-    `.trim();
-
-    // Generate summary audio with shortened detailed feedback
-    const summaryAudio = await generateAndSendTTS(
-      ws,
-      comprehensiveFeedback,
-      session.nativeLanguage,
-      "explanation"
-    );
+    // No audio generation for quiz summary - only text feedback
 
     // Send comprehensive summary to client with both basic and detailed data
     ws.send(JSON.stringify({
@@ -194,8 +185,8 @@ Next step: ${detailedFeedback.strengthsAndWeaknesses.recommendations[0] || 'Keep
       totalQuestions,
       percentage,
       summary: summaryText,
-      summaryAudioUrl: summaryAudio,
-      questions: session.quiz.questions, // Send all questions and answers for review
+      // No audio for quiz summary - only text feedback
+      questions: questions, // Send all questions and answers for review
       // Include detailed feedback in main response
       detailedFeedback: {
         pronunciationScore: detailedFeedback.pronunciationScore,
@@ -272,28 +263,15 @@ export const endQuizEarly = async (
 
   try {
     // Generate detailed feedback for answered questions only
-    const answeredQuestions = session.quiz.questions.slice(0, currentQuestion);
+    const questions = session.quiz.questions || [];
+    const answeredQuestions = questions.slice(0, currentQuestion);
     const detailedFeedback = await generateDetailedQuizFeedback(
       answeredQuestions,
       session.learningLanguage,
       session.nativeLanguage
     );
 
-    // Create shortened feedback for early end
-    const comprehensiveFeedback = `
-${summaryText} ...
-Quick Analysis: ${detailedFeedback.overallScore} out of 100 based on answered questions. ...
-${detailedFeedback.feedback} ...
-Keep working on: ${detailedFeedback.strengthsAndWeaknesses.weaknesses[0] || 'Continue practicing'}
-    `.trim();
-
-    // Generate summary audio
-    const summaryAudio = await generateAndSendTTS(
-      ws,
-      comprehensiveFeedback,
-      session.nativeLanguage,
-      "explanation"
-    );
+    // No audio generation for early quiz end - only text feedback
 
     // Send early end summary with detailed feedback
     ws.send(JSON.stringify({
@@ -303,7 +281,7 @@ Keep working on: ${detailedFeedback.strengthsAndWeaknesses.weaknesses[0] || 'Con
       questionsAnswered: currentQuestion,
       totalQuestions,
       summary: summaryText,
-      summaryAudioUrl: summaryAudio,
+      // No audio for quiz summary - only text feedback
       questions: answeredQuestions, // Only answered questions
       // Include detailed feedback for answered questions
       detailedFeedback: {
@@ -325,5 +303,75 @@ Keep working on: ${detailedFeedback.strengthsAndWeaknesses.weaknesses[0] || 'Con
   } catch (error) {
     console.error("❌ Error ending quiz early:", error);
     ws.send(JSON.stringify({ error: "Failed to end quiz" }));
+  }
+};
+
+// Helper function to generate fallback feedback in native language
+const generateFallbackFeedback = (nativeLanguage: string) => {
+  switch (nativeLanguage) {
+    case 'es-ES':
+      return {
+        feedback: "¡Gran esfuerzo al completar el cuestionario! Sigue practicando para mejorar tus habilidades.",
+        strengths: ["Completaste el cuestionario", "Estás aprendiendo activamente"],
+        weaknesses: ["Continúa practicando regularmente"],
+        recommendations: ["Revisa vocabulario", "Practica hablar más", "Toma más cuestionarios"]
+      };
+    
+    case 'fr-FR':
+      return {
+        feedback: "Excellent effort pour terminer le quiz! Continuez à pratiquer pour améliorer vos compétences.",
+        strengths: ["Vous avez terminé le quiz", "Vous apprenez activement"],
+        weaknesses: ["Continuez à pratiquer régulièrement"],
+        recommendations: ["Révisez le vocabulaire", "Pratiquez plus l'oral", "Faites plus de quiz"]
+      };
+    
+    case 'hi-IN':
+      return {
+        feedback: "प्रश्नोत्तरी पूरी करने के लिए बहुत अच्छा प्रयास! अपने कौशल को बेहतर बनाने के लिए अभ्यास जारी रखें।",
+        strengths: ["आपने प्रश्नोत्तरी पूरी की", "आप सक्रिय रूप से सीख रहे हैं"],
+        weaknesses: ["नियमित अभ्यास जारी रखें"],
+        recommendations: ["शब्दावली की समीक्षा करें", "अधिक बोलने का अभ्यास करें", "और प्रश्नोत्तरी लें"]
+      };
+    
+    case 'de-DE':
+      return {
+        feedback: "Großartige Anstrengung beim Abschließen des Quiz! Üben Sie weiter, um Ihre Fähigkeiten zu verbessern.",
+        strengths: ["Sie haben das Quiz abgeschlossen", "Sie lernen aktiv"],
+        weaknesses: ["Üben Sie weiterhin regelmäßig"],
+        recommendations: ["Wortschatz wiederholen", "Mehr sprechen üben", "Mehr Quiz machen"]
+      };
+    
+    case 'it-IT':
+      return {
+        feedback: "Ottimo sforzo nel completare il quiz! Continua a praticare per migliorare le tue competenze.",
+        strengths: ["Hai completato il quiz", "Stai imparando attivamente"],
+        weaknesses: ["Continua a praticare regolarmente"],
+        recommendations: ["Rivedere il vocabolario", "Praticare di più nel parlare", "Fare più quiz"]
+      };
+    
+    case 'nl-NL':
+      return {
+        feedback: "Geweldige inspanning om de quiz te voltooien! Blijf oefenen om je vaardigheden te verbeteren.",
+        strengths: ["Je hebt de quiz voltooid", "Je leert actief"],
+        weaknesses: ["Blijf regelmatig oefenen"],
+        recommendations: ["Woordenschat herzien", "Meer spreken oefenen", "Meer quizzen maken"]
+      };
+    
+    case 'pt-BR':
+      return {
+        feedback: "Ótimo esforço ao completar o questionário! Continue praticando para melhorar suas habilidades.",
+        strengths: ["Você completou o questionário", "Você está aprendendo ativamente"],
+        weaknesses: ["Continue praticando regularmente"],
+        recommendations: ["Revisar vocabulário", "Praticar mais a fala", "Fazer mais questionários"]
+      };
+    
+    case 'en-US':
+    default:
+      return {
+        feedback: "Great effort on completing the quiz! Keep practicing to improve your skills.",
+        strengths: ["You completed the quiz", "You're actively learning"],
+        weaknesses: ["Continue practicing regularly"],
+        recommendations: ["Review vocabulary", "Practice speaking more", "Take more quizzes"]
+      };
   }
 };
