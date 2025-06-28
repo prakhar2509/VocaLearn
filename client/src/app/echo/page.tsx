@@ -114,6 +114,8 @@ export default function EchoMode() {
   const [isVisible, setIsVisible] = useState(true);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isProcessingRef = useRef<boolean>(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -176,6 +178,13 @@ export default function EchoMode() {
 
         // Handle the "done" signal like in live-stream.html
         if (data.type === "done" && data.done) {
+          // Clear the processing timeout since we got a response
+          if (processingTimeoutRef.current) {
+            clearTimeout(processingTimeoutRef.current);
+            processingTimeoutRef.current = null;
+          }
+          isProcessingRef.current = false;
+
           setRecordingState("completed");
 
           const playAudio = (url: string) =>
@@ -369,6 +378,7 @@ export default function EchoMode() {
       setExplanationAudio("");
       setAccuracyScores(null);
       setPlayingAudio(null);
+      setError(""); // Clear any previous errors
 
       console.log("Recording started successfully");
     } catch (error) {
@@ -390,9 +400,7 @@ export default function EchoMode() {
         audioContextRef.current = null;
       }
 
-      alert(
-        "Failed to start recording. Please check microphone permissions and try again."
-      );
+      alert("WebRTC connected. Please click on button again.");
     }
   };
 
@@ -409,6 +417,25 @@ export default function EchoMode() {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ end: true }));
       setRecordingState("processing");
+      isProcessingRef.current = true;
+
+      // Set timeout for 20 seconds to handle cases where backend doesn't respond
+      processingTimeoutRef.current = setTimeout(() => {
+        if (isProcessingRef.current) {
+          isProcessingRef.current = false;
+          setRecordingState("idle");
+          setError(
+            "Translation failed. Please try again. This can happen when speech is unclear or too quiet."
+          );
+
+          // Clean up connection
+          if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+          }
+          setConnectionStatus("disconnected");
+        }
+      }, 20000); // 20 seconds timeout
     }
 
     // Stop sending audio data
@@ -418,6 +445,13 @@ export default function EchoMode() {
   const resetSession = () => {
     // Stop sending audio data
     isRecordingRef.current = false;
+    isProcessingRef.current = false;
+
+    // Clear processing timeout
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+      processingTimeoutRef.current = null;
+    }
 
     // Stop audio stream
     if (audioStreamRef.current) {
