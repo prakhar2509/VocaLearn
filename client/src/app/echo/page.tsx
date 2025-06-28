@@ -187,46 +187,22 @@ export default function EchoMode() {
 
           setRecordingState("completed");
 
-          const playAudio = (url: string) =>
-            new Promise<void>((resolve, reject) => {
-              const audio = new Audio(url);
-              audio.onended = () => resolve();
-              audio.onerror = reject;
-              audio.play();
-            });
+          // Set audio URLs without auto-playing
+          if (data.audioCorrectionUrl) {
+            setCorrectionAudio(data.audioCorrectionUrl);
+          }
 
-          const playAndClose = async () => {
-            try {
-              if (data.audioCorrectionUrl) {
-                setCorrectionAudio(data.audioCorrectionUrl);
-                await playAudio(data.audioCorrectionUrl);
-                console.log("🔊 Correction audio finished.");
-              }
+          if (data.audioExplanationUrl) {
+            setExplanationAudio(data.audioExplanationUrl);
+          }
 
-              if (data.audioExplanationUrl) {
-                setExplanationAudio(data.audioExplanationUrl);
-                await playAudio(data.audioExplanationUrl);
-                console.log("� Explanation audio finished.");
-              }
-
-              // Close WebSocket after audio playback like in live-stream.html
-              if (wsRef.current) {
-                wsRef.current.close();
-                wsRef.current = null;
-              }
-              setConnectionStatus("disconnected");
-              console.log("✅ Session completed and connection closed.");
-            } catch (err) {
-              console.error("❌ Audio playback failed:", err);
-              if (wsRef.current) {
-                wsRef.current.close();
-                wsRef.current = null;
-              }
-              setConnectionStatus("disconnected");
-            }
-          };
-
-          playAndClose();
+          // Close WebSocket connection after processing is done
+          if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+          }
+          setConnectionStatus("disconnected");
+          console.log("✅ Session completed and connection closed.");
         }
 
         if (data.error) {
@@ -794,6 +770,76 @@ export default function EchoMode() {
               </Card>
             )}
 
+            {/* Corrected Version */}
+            {correctionText && (
+              <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-cyan-50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Target className="w-5 h-5 text-blue-600" />
+                      <CardTitle className="text-lg">
+                        {correctionText === userText
+                          ? "Perfect! No Correction Needed"
+                          : "Corrected Version"}
+                      </CardTitle>
+                      {correctionText !== userText ? (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Improved
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-green-100 text-green-700 border-green-200">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Perfect
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => playAudio(correctionAudio, "correction")}
+                      disabled={isPlaying || !correctionAudio}
+                      className="flex items-center space-x-2"
+                    >
+                      {isPlaying && playingAudio === "correction" ? (
+                        <>
+                          <VolumeX className="w-4 h-4" />
+                          <span>Playing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-4 h-4" />
+                          <span>
+                            {correctionText === userText
+                              ? "Listen to Perfect Pronunciation"
+                              : "Listen to Correction"}
+                          </span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-white rounded-lg p-4 border border-blue-100">
+                    {correctionText === userText ? (
+                      <div className="text-center">
+                        <p className="text-lg text-green-600 font-medium mb-2">
+                          🎉 Excellent pronunciation!
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          Your speech was clear and accurate. Great job!
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-lg text-gray-800 font-medium">
+                        {correctionText}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* AI Response */}
             {aiResponse && (
               <Card className="border-0 shadow-lg bg-gradient-to-r from-emerald-50 to-green-50">
@@ -824,7 +870,7 @@ export default function EchoMode() {
                       ) : (
                         <>
                           <Volume2 className="w-4 h-4" />
-                          <span>Listen to Echo</span>
+                          <span>Listen Feedback</span>
                         </>
                       )}
                     </Button>
@@ -834,52 +880,6 @@ export default function EchoMode() {
                   <div className="bg-white rounded-lg p-4 border border-emerald-100">
                     <p className="text-gray-800 leading-relaxed">
                       {aiResponse}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Corrected Version */}
-            {correctionText && correctionText !== userText && (
-              <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-cyan-50">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Target className="w-5 h-5 text-blue-600" />
-                      <CardTitle className="text-lg">
-                        Corrected Version
-                      </CardTitle>
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Improved
-                      </Badge>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => playAudio(correctionAudio, "correction")}
-                      disabled={isPlaying || !correctionAudio}
-                      className="flex items-center space-x-2"
-                    >
-                      {isPlaying && playingAudio === "correction" ? (
-                        <>
-                          <VolumeX className="w-4 h-4" />
-                          <span>Playing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 className="w-4 h-4" />
-                          <span>Listen to Correction</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-white rounded-lg p-4 border border-blue-100">
-                    <p className="text-lg text-gray-800 font-medium">
-                      {correctionText}
                     </p>
                   </div>
                 </CardContent>
