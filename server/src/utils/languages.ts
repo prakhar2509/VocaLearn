@@ -3,9 +3,11 @@ export const supportedLanguages = [
   { code: 'fr-FR', name: 'French (France)', voiceId: 'fr-FR-maxime' },
   { code: 'en-US', name: 'English (US)', voiceId: 'en-US-paul' },
   { code: 'hi-IN', name: 'Hindi (India)', voiceId: 'hi-IN-rahul' },
-  { code: 'ja-JP', name: 'Japanese (Japan)', voiceId: 'jp-JP-kenji'},
+  { code: 'ja-JP', name: 'Japanese (Japan)', voiceId: 'ja-JP-kenji'},
   { code: 'it-IT', name: 'Italian (Italy)', voiceId: 'it-IT-vincenzo'},
   { code: 'de-DE', name: 'German (Germany)', voiceId: 'de-DE-lia' },
+  {code : 'nl-NL', name : 'Dutch(Netherlands)', voiceId : 'nl-NL-dirk'},
+  {code : 'pt-BR', name: 'Portugese(Brazil)', voiceId : 'pt-BR-isadora'}
 ];
 
 export function getVoiceId(language: string): string {

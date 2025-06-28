@@ -2,10 +2,11 @@
 
 import { WebSocket } from "ws";
 import { processAudioStream } from "../asr";
-import { generateResponse } from "../llm";
+import { generateResponse } from "../services/llm";
+import { calculateAccuracy } from "./llm/accuracy";
 import { generateAndSendTTS } from "../murf";
 import { handleQuizAnswer } from "../quiz";
-import { ClientSession, sessions, clearAudioChunks } from "../managers/session-manager";
+import { ClientSession, sessions, clearAudioChunks, addToConversationHistory, getConversationContext } from "../managers/session-manager";
 
 // Process quiz answer
 export const processQuizAnswer = async (ws: WebSocket, session: ClientSession): Promise<void> => {
@@ -28,25 +29,61 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
   );
   console.log("✅ Transcription:", transcription.text);
   
-  // Send transcription to client
-  ws.send(JSON.stringify({
-    transcription: transcription.text,
-    language: session.learningLanguage,
-  }));
-  
   // Generate LLM response
   const response = await generateResponse(
     transcription.text,
     session.learningLanguage,
     session.nativeLanguage,
-    session.mode
+    session.mode,
+    session.scenarioId,
+    session.conversationHistory
   );
   console.log("✅ Response:", response);
+  
+  // Add user message to conversation history
+  if (session.mode === "dialogue") {
+    addToConversationHistory(session, 'user', transcription.text);
+    // Add AI response to conversation history
+    addToConversationHistory(session, 'assistant', response.correction);
+  }
+  
+  // Calculate accuracy for the user's speech
+  let accuracyResult;
+  if (session.mode === "echo") {
+    // In echo mode, compare against the correction to see how well they matched the expected output
+    accuracyResult = await calculateAccuracy(
+      transcription.text,
+      response.correction, // Compare against the corrected version
+      session.learningLanguage,
+      "echo"
+    );
+  } else {
+    // In dialogue mode, evaluate speech quality without comparing to a specific expected text
+    accuracyResult = await calculateAccuracy(
+      transcription.text,
+      transcription.text, // Self-evaluation for dialogue mode
+      session.learningLanguage,
+      "dialogue"
+    );
+  }
+  console.log("📊 Accuracy:", accuracyResult);
+  
+  // Send transcription and accuracy to client
+  ws.send(JSON.stringify({
+    transcription: transcription.text,
+    language: session.learningLanguage,
+    // Accuracy data
+    accuracy: accuracyResult.accuracy,
+    pronunciationScore: accuracyResult.pronunciationScore,
+    grammarScore: accuracyResult.grammarScore,
+    fluencyScore: accuracyResult.fluencyScore,
+    accuracyFeedback: accuracyResult.feedback
+  }));
   
   // Send text response
   ws.send(JSON.stringify({
     correction: response.correction,
-    explanation: response.explanation,
+    explanation: session.mode === "dialogue" ? "" : response.explanation, // No explanations in dialogue mode unless there's an error
     correctionLanguage: session.learningLanguage,
     explanationLanguage: session.nativeLanguage,
   }));
@@ -59,12 +96,16 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     "correction"
   );
   
-  const explanationAudio = await generateAndSendTTS(
-    ws,
-    response.explanation,
-    session.nativeLanguage,
-    "explanation"
-  );
+  // Only generate explanation audio if there's an explanation to give
+  let explanationAudio = "";
+  if (response.explanation && response.explanation.trim() && session.mode !== "dialogue") {
+    explanationAudio = await generateAndSendTTS(
+      ws,
+      response.explanation,
+      session.nativeLanguage,
+      "explanation"
+    );
+  }
 
   // Send completion message with audio URLs
   ws.send(JSON.stringify({
