@@ -1,6 +1,6 @@
 import { createClient, LiveTranscriptionEvents } from '@deepgram/sdk';
-import { config } from './config';
-import { getSupportedLanguageCodes } from './languages';
+import { config } from './utils/config';
+import { getSupportedLanguageCodes } from './utils/languages';
 
 
 interface Transcription {

@@ -1,7 +1,7 @@
 import { Groq } from 'groq-sdk';
 import Bottleneck from 'bottleneck';
-import { config } from "./config";
-import { getVoiceId } from "./languages";
+import { config } from "./utils/config";
+import { getVoiceId } from "./utils/languages";
 
 interface LLMResponse {
   correction: string;

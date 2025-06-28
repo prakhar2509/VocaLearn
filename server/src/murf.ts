@@ -1,8 +1,8 @@
 // src/murfHttp.ts
 import axios from "axios";
-import { config } from "./config";
+import { config } from "./utils/config";
 import { WebSocket } from "ws";
-import { getVoiceId } from "./languages";
+import { getVoiceId } from "./utils/languages";
 
 
 export const generateAndSendTTS = async (
