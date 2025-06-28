@@ -106,6 +106,7 @@ export default function EchoMode() {
   const [connectionStatus, setConnectionStatus] = useState<
     "disconnected" | "connecting" | "connected"
   >("disconnected");
+  const [error, setError] = useState<string>("");
 
   // Navigation state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -123,9 +124,15 @@ export default function EchoMode() {
     setIsMounted(true);
   }, []);
 
-  // WebSocket connection management
+  // WebSocket connection management - simplified approach like live-stream.html
   const connectWebSocket = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    // Always close existing connection before creating new one
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    if (!learningLanguage || !nativeLanguage) return;
 
     setConnectionStatus("connecting");
     const wsUrl = `ws://localhost:4001?mode=echo&learningLanguage=${learningLanguage}&nativeLanguage=${nativeLanguage}`;
@@ -136,62 +143,97 @@ export default function EchoMode() {
     wsRef.current.onopen = () => {
       console.log("WebSocket connected successfully");
       setConnectionStatus("connected");
+      setError("");
     };
 
     wsRef.current.onmessage = (event) => {
       try {
-        console.log("Raw message received:", event.data);
-        const data: EchoResponse = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
         console.log("📨 Message from server:", data);
-
-        if (data.error) {
-          console.error("Server error:", data.error);
-          setRecordingState("idle");
-          return;
-        }
 
         if (data.transcription) {
           setUserText(data.transcription);
         }
 
-        if (data.llmResponse) {
-          setAiResponse(data.llmResponse.explanation);
-          setCorrectionText(data.llmResponse.correction);
-        } else {
-          // Fallback to direct properties for backward compatibility
-          if ((data as any).correction) {
-            setCorrectionText((data as any).correction);
-          }
-          if ((data as any).explanation) {
-            setAiResponse((data as any).explanation);
-          }
+        // Handle accuracy data
+        if (data.accuracy !== undefined) {
+          setAccuracyScores({
+            accuracy: data.accuracy,
+            pronunciationScore: data.pronunciationScore || 0,
+            grammarScore: data.grammarScore || 0,
+            fluencyScore: data.fluencyScore || 0,
+            feedback: data.accuracyFeedback || "No feedback available",
+          });
         }
 
-        if (data.accuracyResponse) {
-          setAccuracyScores(data.accuracyResponse);
+        if (data.correction) {
+          setCorrectionText(data.correction);
         }
 
-        if (data.audioCorrectionUrl) {
-          setCorrectionAudio(data.audioCorrectionUrl);
+        if (data.explanation) {
+          setAiResponse(data.explanation);
         }
 
-        if (data.audioExplanationUrl) {
-          setExplanationAudio(data.audioExplanationUrl);
-        }
-
-        if (data.done || (data.type === "done" && (data as any).done)) {
+        // Handle the "done" signal like in live-stream.html
+        if (data.type === "done" && data.done) {
           setRecordingState("completed");
+
+          const playAudio = (url: string) =>
+            new Promise<void>((resolve, reject) => {
+              const audio = new Audio(url);
+              audio.onended = () => resolve();
+              audio.onerror = reject;
+              audio.play();
+            });
+
+          const playAndClose = async () => {
+            try {
+              if (data.audioCorrectionUrl) {
+                setCorrectionAudio(data.audioCorrectionUrl);
+                await playAudio(data.audioCorrectionUrl);
+                console.log("🔊 Correction audio finished.");
+              }
+
+              if (data.audioExplanationUrl) {
+                setExplanationAudio(data.audioExplanationUrl);
+                await playAudio(data.audioExplanationUrl);
+                console.log("� Explanation audio finished.");
+              }
+
+              // Close WebSocket after audio playback like in live-stream.html
+              if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+              }
+              setConnectionStatus("disconnected");
+              console.log("✅ Session completed and connection closed.");
+            } catch (err) {
+              console.error("❌ Audio playback failed:", err);
+              if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+              }
+              setConnectionStatus("disconnected");
+            }
+          };
+
+          playAndClose();
+        }
+
+        if (data.error) {
+          console.error("❌ Server error:", data.error);
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
-        console.error("Raw message data:", event.data);
       }
     };
 
     wsRef.current.onerror = (error) => {
-      console.error("WebSocket connection error:", error);
+      console.error("❌ WebSocket error:", error);
       setConnectionStatus("disconnected");
-      setRecordingState("idle");
+      setError(
+        "Connection to server failed. Please check if the server is running and try again."
+      );
     };
 
     wsRef.current.onclose = (event) => {
@@ -204,18 +246,6 @@ export default function EchoMode() {
       setConnectionStatus("disconnected");
     };
   }, [learningLanguage, nativeLanguage]);
-
-  // Auto-connect when both languages are selected
-  useEffect(() => {
-    if (
-      learningLanguage &&
-      nativeLanguage &&
-      connectionStatus === "disconnected"
-    ) {
-      console.log("Both languages selected, attempting to connect...");
-      connectWebSocket();
-    }
-  }, [learningLanguage, nativeLanguage, connectionStatus, connectWebSocket]);
 
   // Cleanup WebSocket on unmount
   useEffect(() => {
@@ -242,32 +272,44 @@ export default function EchoMode() {
     }
 
     try {
-      // Connect WebSocket if not connected
-      if (connectionStatus !== "connected") {
-        connectWebSocket();
-        // Wait a bit for connection
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
+      console.log("Starting audio recording...");
 
-      if (wsRef.current?.readyState !== WebSocket.OPEN) {
-        alert("WebSocket connection not ready. Please try again.");
-        return;
-      }
+      // Create fresh WebSocket connection for each recording session
+      connectWebSocket();
+
+      // Wait for connection to establish
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error("Connection timeout")),
+          3000
+        );
+
+        const checkConnection = () => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            clearTimeout(timeout);
+            resolve();
+          } else if (connectionStatus === "disconnected") {
+            clearTimeout(timeout);
+            reject(new Error("Connection failed"));
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      });
 
       // Get microphone permission and stream
       audioStreamRef.current = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 16000,
           channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
         },
       });
 
       // Create AudioContext with 16kHz sample rate
       audioContextRef.current = new AudioContext({ sampleRate: 16000 });
 
-      // Add AudioWorklet for PCM processing
+      // Add AudioWorklet for PCM processing (simplified like live-stream.html)
       await audioContextRef.current.audioWorklet.addModule(
         URL.createObjectURL(
           new Blob(
@@ -277,8 +319,6 @@ export default function EchoMode() {
                 process(inputs) {
                   const input = inputs[0][0];
                   if (!input) return true;
-                  
-                  // Convert float32 audio to 16-bit PCM
                   const buffer = new ArrayBuffer(input.length * 2);
                   const view = new DataView(buffer);
                   for (let i = 0; i < input.length; i++) {
@@ -307,13 +347,9 @@ export default function EchoMode() {
         "pcm-worklet"
       );
 
-      // Handle PCM data from worklet
+      // Handle PCM data from worklet (simplified like live-stream.html)
       workletNodeRef.current.port.onmessage = (event) => {
-        if (
-          wsRef.current?.readyState === WebSocket.OPEN &&
-          isRecordingRef.current
-        ) {
-          // Send binary audio data
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(event.data);
         }
       };
@@ -323,6 +359,7 @@ export default function EchoMode() {
         .connect(workletNodeRef.current)
         .connect(audioContextRef.current.destination);
 
+      // Set recording state
       setRecordingState("recording");
       isRecordingRef.current = true;
       setUserText("");
@@ -332,45 +369,50 @@ export default function EchoMode() {
       setExplanationAudio("");
       setAccuracyScores(null);
       setPlayingAudio(null);
+
+      console.log("Recording started successfully");
     } catch (error) {
       console.error("Failed to start recording:", error);
-      alert("Failed to access microphone. Please check permissions.");
+      isRecordingRef.current = false;
+      setRecordingState("idle");
+
+      // Clean up on error
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
+        audioStreamRef.current = null;
+      }
+      if (workletNodeRef.current) {
+        workletNodeRef.current.disconnect();
+        workletNodeRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+
+      alert(
+        "Failed to start recording. Please check microphone permissions and try again."
+      );
     }
   };
 
   const stopRecording = () => {
-    // Stop sending audio data immediately
-    isRecordingRef.current = false;
+    console.log("Stopping recording...");
 
-    // First stop the audio stream and clean up AudioContext
+    // Stop the audio stream
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach((track) => track.stop());
       audioStreamRef.current = null;
     }
 
-    // Disconnect and clean up AudioContext and worklet
-    if (workletNodeRef.current) {
-      workletNodeRef.current.disconnect();
-      workletNodeRef.current = null;
+    // Send end signal (like in live-stream.html)
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ end: true }));
+      setRecordingState("processing");
     }
 
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    // Wait a brief moment for any pending audio data to be sent, then send end signal
-    setTimeout(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log("Sending end signal to server");
-        // Ensure we send this as text, not binary
-        const endMessage = JSON.stringify({ end: true });
-        console.log("End message:", endMessage);
-        wsRef.current.send(endMessage);
-      }
-    }, 200); // Increased timeout to ensure all audio processing is complete
-
-    setRecordingState("processing");
+    // Stop sending audio data
+    isRecordingRef.current = false;
   };
 
   const resetSession = () => {
@@ -394,8 +436,15 @@ export default function EchoMode() {
       audioContextRef.current = null;
     }
 
+    // Close WebSocket connection (will be recreated on next recording)
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
     // Reset state
     setRecordingState("idle");
+    setConnectionStatus("disconnected");
     setUserText("");
     setAiResponse("");
     setCorrectionText("");
@@ -403,6 +452,7 @@ export default function EchoMode() {
     setExplanationAudio("");
     setAccuracyScores(null);
     setPlayingAudio(null);
+    setError("");
   };
 
   const playAudio = (audioUrl: string, audioType: string) => {
@@ -435,8 +485,7 @@ export default function EchoMode() {
     });
   };
 
-  const canRecord =
-    learningLanguage && nativeLanguage && connectionStatus === "connected";
+  const canRecord = learningLanguage && nativeLanguage;
 
   // Helper function to get language display name
   const getLanguageDisplayName = (code: string) => {
@@ -521,56 +570,29 @@ export default function EchoMode() {
               </div>
             </div>
 
-            {learningLanguage &&
-              nativeLanguage &&
-              connectionStatus === "connected" && (
-                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center space-x-2 text-green-700">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">
-                      Ready to practice{" "}
-                      {getLanguageDisplayName(learningLanguage)} with{" "}
-                      {getLanguageDisplayName(nativeLanguage)} support
-                    </span>
-                  </div>
+            {learningLanguage && nativeLanguage && (
+              <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center space-x-2 text-green-700">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    Ready to practice {getLanguageDisplayName(learningLanguage)}{" "}
+                    with {getLanguageDisplayName(nativeLanguage)} support
+                  </span>
                 </div>
-              )}
+              </div>
+            )}
 
-            {learningLanguage &&
-              nativeLanguage &&
-              connectionStatus === "connecting" && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center space-x-2 text-blue-700">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm font-medium">
-                      Connecting to server...
-                    </span>
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center space-x-2 text-red-700">
+                  <AlertCircle className="w-4 h-4" />
+                  <div>
+                    <span className="text-sm font-medium">Error</span>
+                    <p className="text-xs text-red-600 mt-1">{error}</p>
                   </div>
                 </div>
-              )}
-
-            {learningLanguage &&
-              nativeLanguage &&
-              connectionStatus === "disconnected" && (
-                <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 text-red-700">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        Connection failed. Please try again.
-                      </span>
-                    </div>
-                    <Button
-                      onClick={connectWebSocket}
-                      size="sm"
-                      variant="outline"
-                      className="border-red-300 text-red-700 hover:bg-red-50"
-                    >
-                      Retry Connection
-                    </Button>
-                  </div>
-                </div>
-              )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
