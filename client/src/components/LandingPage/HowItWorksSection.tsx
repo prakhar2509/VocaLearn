@@ -23,7 +23,7 @@ export default function HowItWorksSection() {
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
             Three simple steps to transform your language learning experience
-            with AI-powered voice technology
+            with Murf AI-powered voice technology
           </p>
         </div>
 
@@ -66,9 +66,9 @@ export default function HowItWorksSection() {
             </CardHeader>
             <CardContent className="z-10 relative flex-1 flex flex-col justify-center">
               <CardDescription className="text-base sm:text text-gray-600 leading-snug">
-                GPT-4 instantly analyzes your speech for grammar, pronunciation,
-                and fluency. Get personalized corrections and suggestions in
-                real-time.
+                Gemini instantly analyzes your speech for grammar,
+                pronunciation, and fluency. Get personalized corrections and
+                suggestions in real-time.
               </CardDescription>
             </CardContent>
           </Card>

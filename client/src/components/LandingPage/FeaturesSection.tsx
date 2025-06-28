@@ -78,8 +78,8 @@ export default function FeaturesSection() {
               Perfect Audio
             </CardTitle>
             <CardDescription className="text-base sm:text-lg text-gray-600 text-left">
-              Crystal-clear, natural-sounding voice responses powered by
-              advanced text-to-speech technology.
+              Crystal-clear, natural-sounding voice responses powered by Murf AI
+              for advanced text-to-speech technology.
             </CardDescription>
           </Card>
         </div>

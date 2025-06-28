@@ -9,8 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title:
-    "VocaLearn - AI-Powered Language Learning with Real-Time Voice Feedback",
+  title: "VocaLearn",
   description:
     "Master any language with VocaLearn's revolutionary AI voice technology. Get instant corrections, practice natural conversations, and improve fluency faster than ever before.",
   keywords:

@@ -37,7 +37,7 @@ export default function HeroSection({
           <div className="text-center lg:text-left">
             <Badge className="mb-6 bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200 transition-colors">
               <Sparkles className="w-4 h-4 mr-2" />
-              AI-Powered Language Learning
+              Murf AI-Powered Language Learning
             </Badge>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
@@ -58,7 +58,7 @@ export default function HeroSection({
                 size="lg"
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-6 text-lg"
               >
-                Try Free Demo
+                Start Learning Now
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button

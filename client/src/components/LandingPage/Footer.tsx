@@ -15,7 +15,7 @@ export default function Footer() {
               <span className="text-2xl font-bold">VocaLearn</span>
             </div>
             <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
-              Revolutionizing language learning through AI-powered voice
+              Revolutionizing language learning through Murf AI-powered voice
               technology. Master any language with real-time feedback and
               natural conversations.
             </p>
