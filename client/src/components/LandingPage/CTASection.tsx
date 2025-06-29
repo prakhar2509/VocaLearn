@@ -6,7 +6,7 @@ export default function CTASection() {
       <div className="max-w-7xl w-full mx-auto">
         <div className="rounded-2xl shadow-2xl bg-gradient-to-r from-purple-600 to-blue-600 px-8 py-10 flex flex-col items-center text-center relative">
           <h2 className="text-3xl font-bold text-white mb-6">
-            Powered by Gemini, Murf AI & Advanced Speech Recognition
+            Powered by Groq, Murf AI & Advanced Speech Recognition
           </h2>
           <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
             Experience the most advanced language learning technology available.
@@ -18,7 +18,7 @@ export default function CTASection() {
               99.2% Accuracy
             </span>
             <span className="px-8 py-3 rounded-full bg-white/20 text-white font-semibold text-base shadow-sm backdrop-blur-sm">
-              50ms Response Time
+              1s Response Time
             </span>
             <span className="px-8 py-3 rounded-full bg-white/20 text-white font-semibold text-base shadow-sm backdrop-blur-sm">
               24/7 Available

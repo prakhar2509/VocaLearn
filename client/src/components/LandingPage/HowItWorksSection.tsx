@@ -66,7 +66,7 @@ export default function HowItWorksSection() {
             </CardHeader>
             <CardContent className="z-10 relative flex-1 flex flex-col justify-center">
               <CardDescription className="text-base sm:text text-gray-600 leading-snug">
-                Gemini instantly analyzes your speech for grammar,
+                Groq instantly analyzes your speech for grammar,
                 pronunciation, and fluency. Get personalized corrections and
                 suggestions in real-time.
               </CardDescription>

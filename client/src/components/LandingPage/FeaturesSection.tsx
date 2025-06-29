@@ -61,7 +61,7 @@ export default function FeaturesSection() {
               <Globe className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-lg font-bold text-gray-900 mb-2 text-left">
-              50+ Languages
+              9 Languages
             </CardTitle>
             <CardDescription className="text-base sm:text-lg text-gray-600 text-left">
               Learn any language with our comprehensive multilingual AI system
