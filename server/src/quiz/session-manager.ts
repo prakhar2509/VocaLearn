@@ -59,13 +59,25 @@ export const handleQuizControlMessage = async (
   }
 
   if (message.action === "final_audio_completed" && session.quiz && session.quiz.currentQuestion >= session.quiz.totalQuestions) {
+    // Check if summary already generated to prevent duplicates
+    if (session.quiz.summaryGenerated) {
+      console.log("🔄 Quiz summary already generated, skipping duplicate");
+      return true;
+    }
     console.log("🎵 Client confirmed final audio completed - showing quiz summary");
+    session.quiz.summaryGenerated = true; // Set flag before generating
     await sendQuizSummary(ws, sessions);
     return true;
   }
 
   if (message.action === "skip_final_audio" && session.quiz && session.quiz.currentQuestion >= session.quiz.totalQuestions) {
+    // Check if summary already generated to prevent duplicates
+    if (session.quiz.summaryGenerated) {
+      console.log("🔄 Quiz summary already generated, skipping duplicate");
+      return true;
+    }
     console.log("⏭️ Client skipped final audio - showing quiz summary");
+    session.quiz.summaryGenerated = true; // Set flag before generating
     await sendQuizSummary(ws, sessions);
     return true;
   }

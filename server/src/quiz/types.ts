@@ -12,6 +12,7 @@ export interface QuizSession {
   }>;
   isWaitingForAnswer: boolean;
   questionHistory: string[]; // Track generated questions to avoid repeats
+  summaryGenerated?: boolean; // Flag to prevent duplicate summary generation
 }
 
 export interface ClientSession {

@@ -31,17 +31,25 @@ export const processAudioStream = async (audioChunks: Buffer[], language: string
         encoding: 'linear16',
         interim_results: true,
         punctuate: true,
-        model: 'nova-2', // Fixed to nova-2
-        endpointing: 150,
+        model: 'nova-2',
+        endpointing: 3000, // 3 seconds of silence before considering speech ended
+        smart_format: true, // Better formatting
+        vad_events: true, // Voice activity detection events
+        utterance_end_ms: 2000, // Wait 2 seconds after utterance ends
       });
 
       let accumulatedTranscript = '';
+      let latestCompleteTranscript = '';
       let promiseSettled = false;
+      let finalTranscriptTimeout: NodeJS.Timeout | null = null;
 
       const cleanup = () => {
         if (!promiseSettled) {
           promiseSettled = true;
           clearTimeout(timeoutId);
+          if (finalTranscriptTimeout) {
+            clearTimeout(finalTranscriptTimeout);
+          }
           try {
             deepgramSocket.finish();
           } catch (e) {
@@ -52,11 +60,11 @@ export const processAudioStream = async (audioChunks: Buffer[], language: string
 
       const timeoutId = setTimeout(() => {
         if (!promiseSettled) {
-          console.error('Deepgram transcription timed out after 20 seconds');
+          console.error('Deepgram transcription timed out after 35 seconds');
           cleanup();
           reject(new Error('Deepgram transcription timed out'));
         }
-      }, 20000);
+      }, 35000); // Increased from 20s to 35s to match the new audio timeout
 
       deepgramSocket.on(LiveTranscriptionEvents.Open, () => {
         console.log('Deepgram WebSocket opened. Sending audio chunks...');
@@ -73,27 +81,81 @@ export const processAudioStream = async (audioChunks: Buffer[], language: string
             deepgramSocket.finish();
             console.log('Deepgram audio chunks sent and finished');
           }
-        }, 15000);
+        }, 30000); // Increased from 15s to 30s to allow more time for quiz answers
       });
 
       deepgramSocket.on(LiveTranscriptionEvents.Transcript, (data) => {
         if (promiseSettled) return;
 
         const transcription = data?.channel?.alternatives?.[0]?.transcript;
-        if (transcription) {
+        if (transcription && transcription.trim()) {
           console.log(`Deepgram transcript: ${transcription} (is_final: ${data.is_final}, speech_final: ${data.speech_final}, from_finalize: ${data.from_finalize})`);
           
-          // Store the latest final transcript (don't accumulate to avoid duplicates)
+          // Always keep track of the latest transcript (final or interim)
           if (data.is_final) {
-            accumulatedTranscript = transcription;
+            // This is a final transcript - add it to our accumulated result
+            if (accumulatedTranscript) {
+              accumulatedTranscript += ' ' + transcription;
+            } else {
+              accumulatedTranscript = transcription;
+            }
+            latestCompleteTranscript = accumulatedTranscript;
+            console.log(`📝 Final transcript added: "${accumulatedTranscript}"`);
+          } else {
+            // This is an interim transcript - it might be a continuation
+            if (accumulatedTranscript) {
+              latestCompleteTranscript = accumulatedTranscript + ' ' + transcription;
+            } else {
+              latestCompleteTranscript = transcription;
+            }
+            console.log(`📝 Interim transcript tracked: "${latestCompleteTranscript}"`);
           }
+          
+          // Clear any existing timeout
+          if (finalTranscriptTimeout) {
+            clearTimeout(finalTranscriptTimeout);
+          }
+          
+          // Set a timeout to finalize the transcript
+          finalTranscriptTimeout = setTimeout(() => {
+            if (!promiseSettled && latestCompleteTranscript.trim()) {
+              console.log('🕐 Transcript timeout reached. Using latest complete transcript...');
+              console.log(`✅ Final Transcription: "${latestCompleteTranscript}"`);
+              cleanup();
+              resolve({ text: latestCompleteTranscript.trim(), language });
+            }
+          }, 2500); // Wait 2.5 seconds after last transcript update
         }
 
+        // Immediate resolution for speech_final or from_finalize (preferred method)
         if (transcription && data.is_final && (data.speech_final || data.from_finalize)) {
-          console.log('Deepgram received final speech/transcript. Resolving...');
-          console.log(`✅ Transcription: ${accumulatedTranscript}`);
+          console.log('Deepgram received definitive final speech. Resolving immediately...');
+          console.log(`✅ Final Transcription (definitive): ${latestCompleteTranscript || accumulatedTranscript}`);
+          if (finalTranscriptTimeout) {
+            clearTimeout(finalTranscriptTimeout);
+          }
           cleanup();
-          resolve({ text: accumulatedTranscript, language });
+          resolve({ text: (latestCompleteTranscript || accumulatedTranscript).trim(), language });
+        }
+      });
+
+      // Handle Voice Activity Detection events
+      deepgramSocket.on(LiveTranscriptionEvents.SpeechStarted, () => {
+        console.log('🎤 Speech started detected by Deepgram');
+      });
+
+      deepgramSocket.on(LiveTranscriptionEvents.UtteranceEnd, () => {
+        console.log('🛑 Utterance end detected by Deepgram');
+        // If we have any transcript (final or latest complete), finalize it
+        const finalText = latestCompleteTranscript || accumulatedTranscript;
+        if (!promiseSettled && finalText.trim()) {
+          console.log('🕐 Utterance end - finalizing transcript...');
+          console.log(`✅ Final Transcription (utterance end): "${finalText}"`);
+          if (finalTranscriptTimeout) {
+            clearTimeout(finalTranscriptTimeout);
+          }
+          cleanup();
+          resolve({ text: finalText.trim(), language });
         }
       });
 
@@ -118,9 +180,11 @@ export const processAudioStream = async (audioChunks: Buffer[], language: string
         console.log(`Deepgram WebSocket closed (code: ${code}, reason: ${reason})`);
         if (!promiseSettled) {
           cleanup();
-          if (accumulatedTranscript.trim()) {
-            console.log('Deepgram stream closed, but accumulated transcript. Resolving...');
-            resolve({ text: accumulatedTranscript.trim(), language });
+          const finalText = latestCompleteTranscript || accumulatedTranscript;
+          if (finalText.trim()) {
+            console.log('Deepgram stream closed, using latest complete transcript...');
+            console.log(`✅ Final Transcription (close): "${finalText}"`);
+            resolve({ text: finalText.trim(), language });
           } else {
             console.error('Deepgram stream closed without transcription');
             reject(new Error('Deepgram stream closed without transcription'));

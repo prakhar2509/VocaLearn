@@ -541,22 +541,15 @@
         
         summaryContent.innerHTML = summaryHtml;
         
-        // Store summary audio
-        currentSummaryAudio = data.summaryAudioUrl;
-        playSummaryAudio.disabled = !data.summaryAudioUrl;
+        // No audio for quiz summary - disable the audio button
+        currentSummaryAudio = null;
+        playSummaryAudio.disabled = true;
         
         // Store quiz data for review
         quizData.questions = data.questions;
         
         // Disable quiz controls
         endQuizBtn.disabled = true;
-        
-        // Auto-play summary
-        if (data.summaryAudioUrl) {
-          playAudio(data.summaryAudioUrl).catch(err => {
-            console.error("Summary audio playback failed:", err);
-          });
-        }
       }
 
       function handleQuizEndedEarly(data) {
@@ -569,8 +562,9 @@
           <div>${data.summary}</div>
         `;
         
-        currentSummaryAudio = data.summaryAudioUrl;
-        playSummaryAudio.disabled = !data.summaryAudioUrl;
+        // No audio for quiz summary - disable the audio button
+        currentSummaryAudio = null;
+        playSummaryAudio.disabled = true;
         
         quizData.questions = data.questions;
         endQuizBtn.disabled = true;
@@ -615,42 +609,27 @@
         try {
           status.textContent = "🎤 Recording your answer...";
           
-          // Get microphone access
+          // Get microphone access with better constraints
           audioStream = await navigator.mediaDevices.getUserMedia({
-            audio: { sampleRate: 16000, channelCount: 1 }
+            audio: { 
+              sampleRate: 16000, 
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
           });
 
           audioCtx = new AudioContext({ sampleRate: 16000 });
 
-          // Create audio worklet
-          await audioCtx.audioWorklet.addModule(
-            URL.createObjectURL(
-              new Blob([`
-                class PCMWorkletProcessor extends AudioWorkletProcessor {
-                  process(inputs) {
-                    const input = inputs[0][0];
-                    if (!input) return true;
-                    const buffer = new ArrayBuffer(input.length * 2);
-                    const view = new DataView(buffer);
-                    for (let i = 0; i < input.length; i++) {
-                      let sample = Math.max(-1, Math.min(1, input[i]));
-                      sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                      view.setInt16(i * 2, sample, true);
-                    }
-                    this.port.postMessage(buffer);
-                    return true;
-                  }
-                }
-                registerProcessor('pcm-worklet', PCMWorkletProcessor);
-              `], { type: "application/javascript" })
-            )
-          );
+          // Create audio worklet using the external file
+          await audioCtx.audioWorklet.addModule('./worklet.js');
 
           const source = audioCtx.createMediaStreamSource(audioStream);
-          workletNode = new AudioWorkletNode(audioCtx, "pcm-worklet");
+          workletNode = new AudioWorkletNode(audioCtx, "pcm-encoder");
 
           workletNode.port.onmessage = (event) => {
-            if (ws.readyState === WebSocket.OPEN) {
+            if (ws.readyState === WebSocket.OPEN && isRecording) {
               ws.send(event.data);
             }
           };
@@ -659,10 +638,12 @@
 
           answerBtn.disabled = true;
           stopRecordingBtn.disabled = false;
+          
+          console.log("🎤 Recording started successfully");
 
         } catch (err) {
           console.error("Microphone access failed:", err);
-          status.textContent = "⚠️ Microphone access failed";
+          status.textContent = "⚠️ Microphone access failed. Please check permissions.";
           isRecording = false; // Reset recording flag on error
         }
       };
@@ -676,17 +657,44 @@
           return;
         }
         
+        if (!isRecording) {
+          console.log("⚠️ Not currently recording, ignoring click");
+          return;
+        }
+        
+        console.log("🛑 Stopping recording...");
         isProcessingAnswer = true;
         isRecording = false; // Reset recording flag
         
+        // Stop the audio stream
         if (audioStream) {
-          audioStream.getTracks().forEach(track => track.stop());
-        }
-        if (audioCtx) {
-          audioCtx.close();
+          audioStream.getTracks().forEach(track => {
+            track.stop();
+            console.log("🔇 Audio track stopped");
+          });
+          audioStream = null;
         }
         
-        ws.send(JSON.stringify({ end: true }));
+        // Disconnect and close the audio worklet
+        if (workletNode) {
+          workletNode.disconnect();
+          workletNode = null;
+        }
+        
+        // Close the audio context
+        if (audioCtx) {
+          audioCtx.close().then(() => {
+            console.log("🔇 Audio context closed");
+          }).catch(err => {
+            console.warn("Audio context close error:", err);
+          });
+          audioCtx = null;
+        }
+        
+        // Send end message to server
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ end: true }));
+        }
         
         status.textContent = "⏳ Processing your answer...";
         stopRecordingBtn.disabled = true;

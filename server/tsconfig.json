@@ -4,10 +4,12 @@
     "module": "commonjs",
     "lib": ["es2020"],
     "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "sourceMap": true
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["tests/**/*", "dist/**/*", "node_modules/**/*"]
 }

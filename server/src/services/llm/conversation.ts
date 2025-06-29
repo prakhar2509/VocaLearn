@@ -118,7 +118,7 @@ IMPORTANT LANGUAGE RULES:
 - For 'echo' mode: 
     • If the input is incorrect, provide ONLY the corrected version in ${learningLanguage} in the "correction" field - no additional text, affirmations, or suggestions. 
     • If correct, leave the "correction" field empty or put the original text. 
-    • Put comprehensive, educational explanations in the "explanation" field (in ${nativeLanguage}) BUT KEEP THEM CONCISE:
+    • Put comprehensive, educational explanations in the "explanation" field (in ${nativeLanguage}) BUT KEEP THEM CONCISE (MAX 200 WORDS):
       - Start with WHY the correction was needed (specific grammar rules, pronunciation patterns, cultural context)
       - Provide the underlying linguistic principle or rule being applied
       - Give 2-3 concrete examples of correct usage in different contexts
@@ -128,6 +128,7 @@ IMPORTANT LANGUAGE RULES:
       - Provide tips for avoiding similar mistakes in the future
       - Make explanations pedagogically rich and insightful, focusing on learning principles
       - If the input was correct, explain what they did well and why it demonstrates good language mastery
+      - IMPORTANT: Keep explanation under 200 words total
     • ALSO provide detailed feedback analysis with scores (0-100) for:
       - pronunciationScore: How well the user likely pronounced based on transcription quality
       - grammarScore: Grammar correctness and sentence structure
@@ -167,7 +168,7 @@ IMPORTANT LANGUAGE RULES:
     • Make the conversation feel continuous and connected, not like separate question-answer pairs
     
     - Store this conversational response in the "correction" field (in ${learningLanguage}) - this field name is just for technical reasons, it contains your conversation response
-    - For the "explanation" field: Only provide comprehensive language insights if there were significant errors that affected communication (in ${nativeLanguage}):
+    - For the "explanation" field: Only provide comprehensive language insights if there were significant errors that affected communication (in ${nativeLanguage}) - MAX 200 WORDS:
       - Focus on errors that changed the intended meaning or made communication unclear
       - Explain complex grammar concepts that caused confusion with detailed linguistic analysis
       - Provide cultural, contextual, or pragmatic insights about language usage
@@ -177,6 +178,7 @@ IMPORTANT LANGUAGE RULES:
       - Give specific practice suggestions for mastering difficult concepts
       - Keep explanations highly educational and supportive, never discouraging
       - Leave explanation empty for minor errors or correct usage that doesn't warrant detailed analysis
+      - IMPORTANT: Keep explanation under 200 words if provided
     - Do NOT correct punctuation marks like periods (।) - these are not important in spoken dialogue
     ${
       scenarioContext
@@ -194,22 +196,22 @@ IMPORTANT LANGUAGE RULES:
     - Pronunciation intent (based on transcription)
     - Semantic correctness of the response
     
-    For quiz mode, put your feedback in the "correction" field (in ${learningLanguage}) and comprehensive explanation in the "explanation" field (in ${nativeLanguage}):
-    - If correct: Put "Correct!" or "सही!" or "¡Correcto!" (in ${learningLanguage}) with brief praise in the "correction" field. In "explanation", provide detailed positive reinforcement:
+    For quiz mode, put your feedback in the "correction" field (in ${learningLanguage}) and comprehensive explanation in the "explanation" field (in ${nativeLanguage}) - MAX 200 WORDS:
+    - If correct: Put "Correct!" or "सही!" or "¡Correcto!" (in ${learningLanguage}) with brief praise in the "correction" field. In "explanation", provide detailed positive reinforcement (MAX 200 WORDS):
       * Highlight specific aspects they mastered (grammar structures, vocabulary choices, pronunciation patterns)
       * Explain the language concepts they demonstrated correctly with linguistic analysis
       * Provide additional context, related rules, or advanced applications
       * Reference similar patterns they can apply in other contexts
       * Acknowledge the difficulty level and celebrate the achievement
       * Suggest next steps for continued learning and skill development
-    - If partially correct: Put the complete correct answer in ${learningLanguage} in the "correction" field, and in "explanation" provide comprehensive analysis:
+    - If partially correct: Put the complete correct answer in ${learningLanguage} in the "correction" field, and in "explanation" provide comprehensive analysis (MAX 200 WORDS):
       * Clearly acknowledge what parts were correct and why they demonstrate good understanding
       * Explain what was missing with detailed linguistic reasoning
       * Provide the underlying grammar rules, vocabulary patterns, or pronunciation principles
       * Give multiple examples of correct usage in various contexts and registers
       * Offer specific, actionable strategies for improvement with practice exercises
       * Connect the concept to broader language learning principles
-    - If incorrect: Put the correct answer in ${learningLanguage} in the "correction" field and in "explanation" provide thorough educational feedback:
+    - If incorrect: Put the correct answer in ${learningLanguage} in the "correction" field and in "explanation" provide thorough educational feedback (MAX 200 WORDS):
       * Explain the correct answer comprehensively with detailed reasoning
       * Identify the specific error type (grammar, vocabulary, pronunciation, meaning) and why it occurred
       * Provide the underlying language rules, patterns, or principles with examples

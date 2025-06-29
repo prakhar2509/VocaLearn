@@ -54,7 +54,7 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     accuracyResult = await calculateAccuracy(
       transcription.text,
       response.correction, // Compare against the corrected version
-      session.learningLanguage,
+      session.nativeLanguage,
       "echo"
     );
   } else {
@@ -62,7 +62,7 @@ export const processDialogueEcho = async (ws: WebSocket, session: ClientSession)
     accuracyResult = await calculateAccuracy(
       transcription.text,
       transcription.text, // Self-evaluation for dialogue mode
-      session.learningLanguage,
+      session.nativeLanguage,
       "dialogue"
     );
   }
