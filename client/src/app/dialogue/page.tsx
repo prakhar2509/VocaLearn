@@ -157,7 +157,6 @@ export default function DialogueMode() {
     Array<{ role: "user" | "assistant"; content: string; timestamp: number }>
   >([]);
   const isRecordingRef = useRef<boolean>(false);
-  const responseTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -186,9 +185,6 @@ export default function DialogueMode() {
       cleanupAudio();
       if (wsRef.current) {
         wsRef.current.close();
-      }
-      if (responseTimeoutRef.current) {
-        clearTimeout(responseTimeoutRef.current);
       }
     };
   }, []);
@@ -336,14 +332,12 @@ export default function DialogueMode() {
           const data = JSON.parse(event.data);
           console.log("📨 WebSocket message:", data);
 
-          // Clear timeout when we receive any response
-          if (responseTimeoutRef.current) {
-            clearTimeout(responseTimeoutRef.current);
-            responseTimeoutRef.current = undefined;
-          }
-
-          // Handle audio messages
-          if (data.type === "audio" && data.audioUrl) {
+          // Handle audio messages (but skip explanation audio)
+          if (
+            data.type === "audio" &&
+            data.audioUrl &&
+            data.label !== "explanation"
+          ) {
             console.log("🔊 Playing audio:", data.label, data.audioUrl);
             const audio = new Audio(data.audioUrl);
             audio.play().catch((e) => console.log("Audio play failed:", e));
@@ -354,44 +348,29 @@ export default function DialogueMode() {
           if (data.transcription && data.transcription.trim()) {
             addMessage(data.transcription, "user");
             setConversationState("processing");
-            return; // Don't process other fields when handling transcription
           }
 
-          // Handle AI responses - avoid duplicates by checking for specific response types
-          if (data.type === "response" && data.correction && data.correction.trim()) {
+          // Handle AI response
+          if (data.correction && data.correction.trim()) {
             addMessage(data.correction, "ai");
             setConversationState("active");
             setIsRecording(false);
-            isRecordingRef.current = false;
-            return;
           }
 
-          // Handle initial greeting
-          if (data.type === "greeting" && data.message && data.message.trim()) {
+          // Handle initial greeting or response
+          if (data.type === "response" && data.correction) {
+            addMessage(data.correction, "ai");
+            setConversationState("active");
+            setIsRecording(false);
+          } else if (data.type === "greeting" && data.message) {
             addMessage(data.message, "ai");
             setConversationState("active");
-            return;
-          }
-
-          // Handle standalone correction (fallback for other message formats)
-          if (!data.type && data.correction && data.correction.trim() && !data.transcription) {
-            addMessage(data.correction, "ai");
-            setConversationState("active");
-            setIsRecording(false);
-            isRecordingRef.current = false;
-            return;
-          }
-
-          // Handle explanation only if it's not already handled above
-          if (data.explanation && data.explanation.trim() && !data.correction) {
-            addMessage(`💡 ${data.explanation}`, "ai");
           }
 
           // Re-enable recording after processing
           if (data.type === "done" || data.done === true) {
             setConversationState("active");
             setIsRecording(false);
-            isRecordingRef.current = false;
           }
 
           if (data.type === "error") {
@@ -438,16 +417,6 @@ export default function DialogueMode() {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ end: true }));
     }
-
-    // Set 20-second timeout for response
-    responseTimeoutRef.current = setTimeout(() => {
-      if (conversationState === "processing") {
-        setError("No response received from AI. Please try again.");
-        setConversationState("active");
-        setIsRecording(false);
-        isRecordingRef.current = false;
-      }
-    }, 20000);
   };
 
   const playMessage = async (messageId: string, text: string) => {
@@ -470,15 +439,10 @@ export default function DialogueMode() {
     if (wsRef.current) {
       wsRef.current.close();
     }
-    if (responseTimeoutRef.current) {
-      clearTimeout(responseTimeoutRef.current);
-      responseTimeoutRef.current = undefined;
-    }
     cleanupAudio();
     setMessages([]);
     setConversationState("setup");
     setIsRecording(false);
-    isRecordingRef.current = false;
     setCurrentPlayingId(null);
     setError("");
     conversationHistoryRef.current = [];
@@ -493,16 +457,6 @@ export default function DialogueMode() {
 
       <div className="container mx-auto px-4 pt-24 pb-16">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold gradient-text mb-4">
-              Dialogue Mode
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Practice natural conversations with AI in real-world scenarios
-            </p>
-          </div>
-
           {error && (
             <Card className="mb-6 border-red-200 bg-red-50">
               <CardContent className="p-4">
@@ -762,23 +716,6 @@ export default function DialogueMode() {
                             <p className="text-sm leading-relaxed">
                               {message.text}
                             </p>
-                            {message.type === "ai" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  playMessage(message.id, message.text)
-                                }
-                                disabled={currentPlayingId === message.id}
-                                className="p-1 h-auto min-w-0 hover:bg-gray-200"
-                              >
-                                {currentPlayingId === message.id ? (
-                                  <VolumeX className="w-3 h-3" />
-                                ) : (
-                                  <Volume2 className="w-3 h-3" />
-                                )}
-                              </Button>
-                            )}
                           </div>
                         </div>
                       </div>
