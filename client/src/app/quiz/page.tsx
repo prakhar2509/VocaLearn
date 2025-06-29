@@ -208,26 +208,42 @@ export default function QuizMode() {
     } else if (data.type === "transcription_failed") {
       handleTranscriptionFailed(data);
     } else if (data.error) {
-      setError(data.error);
-      // toast.error(data.error);
+      // Only set error if it's a critical error that should be shown to user
+      if (data.error.includes("Connection") || data.error.includes("Server")) {
+        setError(data.error);
+      }
+      // Log all errors for debugging but don't show toast
+      console.error("Quiz error:", data.error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleQuizQuestion = useCallback((data: any) => {
     console.log("📥 Received quiz question:", data);
-    setCurrentQuestion({
-      question: data.question || "No question provided",
-      id: data.questionId,
-    });
-    setCurrentQuestionNumber(data.questionNumber);
-    setTotalQuestions(data.totalQuestions);
-    setQuestionAudioUrl(data.questionAudioUrl);
-    setQuizState("active");
+    // Clear previous question immediately
+    setCurrentQuestion(null);
+    setFeedback(null);
+    setQuestionAudioUrl(null);
+    setFeedbackAudioUrl(null);
+    setExplanationAudioUrl(null);
 
-    // Auto-play question audio
-    if (data.questionAudioUrl) {
-      playAudio(data.questionAudioUrl);
-    }
+    // Set new question after a brief delay to ensure clean transition
+    setTimeout(() => {
+      setCurrentQuestion({
+        question: data.question || "No question provided",
+        id: data.questionId,
+      });
+      setCurrentQuestionNumber(data.questionNumber);
+      setTotalQuestions(data.totalQuestions);
+      setQuestionAudioUrl(data.questionAudioUrl);
+      setQuizState("active");
+
+      // Auto-play question audio
+      if (data.questionAudioUrl) {
+        playAudio(data.questionAudioUrl);
+      }
+    }, 100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleQuizFeedback = useCallback((data: any) => {
@@ -247,6 +263,7 @@ export default function QuizMode() {
     if (data.feedbackAudioUrl) {
       playAudio(data.feedbackAudioUrl);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleQuizSummary = useCallback((data: any) => {
@@ -335,6 +352,7 @@ export default function QuizMode() {
         handleQuizMessage(data);
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
+        // Don't show toast for JSON parsing errors as they can be normal during connection
       }
     };
 
@@ -342,6 +360,7 @@ export default function QuizMode() {
       console.error("❌ WebSocket error:", error);
       setQuizState("error");
       setError("Connection failed. Please check if the server is running.");
+      // Only show toast for critical connection errors
       toast.error("Connection failed. Please check server status.");
     };
 
@@ -354,6 +373,8 @@ export default function QuizMode() {
   }, [config, handleQuizMessage, quizState]);
 
   const startQuiz = () => {
+    // Clear any previous errors
+    setError("");
     connectWebSocket();
   };
 
@@ -470,9 +491,13 @@ export default function QuizMode() {
 
   const continueToNext = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ action: "next_question" }));
-      setQuizState("active");
+      // Clear current state immediately for smooth transition
+      setCurrentQuestion(null);
       setFeedback(null);
+      setQuizState("active");
+
+      // Send next question request
+      wsRef.current.send(JSON.stringify({ action: "next_question" }));
     }
   };
 
@@ -518,7 +543,7 @@ export default function QuizMode() {
 
       <div className="container mx-auto px-4 pt-24 pb-16">
         <div className="max-w-4xl mx-auto">
-          {error && (
+          {error && quizState === "error" && (
             <Card className="mb-6 border-red-200 bg-red-50">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2 text-red-700">
