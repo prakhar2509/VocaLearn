@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -204,6 +205,7 @@ export default function EchoMode() {
           isProcessingRef.current = false;
 
           setRecordingState("completed");
+          toast.success("Speech analysis completed!");
 
           // Set audio URLs without auto-playing
           if (data.audioCorrectionUrl) {
@@ -225,6 +227,7 @@ export default function EchoMode() {
 
         if (data.error) {
           console.error("❌ Server error:", data.error);
+          toast.error("Server error occurred");
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
@@ -237,6 +240,7 @@ export default function EchoMode() {
       setError(
         "Connection to server failed. Please check if the server is running and try again."
       );
+      toast.error("Connection failed. Please check server status.");
     };
 
     wsRef.current.onclose = (event) => {
@@ -270,7 +274,7 @@ export default function EchoMode() {
 
   const startRecording = async () => {
     if (!learningLanguage || !nativeLanguage) {
-      alert("Please select both learning and native languages first.");
+      toast.error("Please select both learning and native languages first.");
       return;
     }
 
@@ -376,6 +380,7 @@ export default function EchoMode() {
       setError(""); // Clear any previous errors
 
       console.log("Recording started successfully");
+      toast.success("Recording started! Speak clearly now.");
     } catch (error) {
       console.error("Failed to start recording:", error);
       isRecordingRef.current = false;
@@ -422,6 +427,7 @@ export default function EchoMode() {
           setError(
             "Translation failed. Please try again. This can happen when speech is unclear or too quiet."
           );
+          toast.error("Translation failed. Please try speaking more clearly.");
 
           // Clean up connection
           if (wsRef.current) {
@@ -483,6 +489,7 @@ export default function EchoMode() {
     setDetailedFeedback(null);
     setPlayingAudio(null);
     setError("");
+    toast.success("Session reset successfully!");
   };
 
   const playAudio = (audioUrl: string, audioType: string) => {
@@ -506,6 +513,7 @@ export default function EchoMode() {
       setIsPlaying(false);
       setPlayingAudio(null);
       console.error("Failed to play audio");
+      toast.error("Failed to play audio");
     };
 
     audio.play().catch((error) => {
