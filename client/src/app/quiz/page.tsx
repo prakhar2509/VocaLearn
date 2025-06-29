@@ -102,7 +102,8 @@ type QuizState =
   | "processing"
   | "feedback"
   | "completed"
-  | "error";
+  | "error"
+  | "waiting";
 
 const languages: Language[] = [
   { code: "es-ES", name: "Spanish", flag: "🇪🇸" },
@@ -169,6 +170,7 @@ export default function QuizMode() {
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const isRecordingRef = useRef<boolean>(false);
   const isProcessingRef = useRef<boolean>(false);
+  const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -176,6 +178,9 @@ export default function QuizMode() {
       cleanupAudio();
       if (wsRef.current) {
         wsRef.current.close();
+      }
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,29 +225,32 @@ export default function QuizMode() {
 
   const handleQuizQuestion = useCallback((data: any) => {
     console.log("📥 Received quiz question:", data);
-    // Clear previous question immediately
-    setCurrentQuestion(null);
+
+    // Clear any waiting timeout
+    if (waitingTimeoutRef.current) {
+      clearTimeout(waitingTimeoutRef.current);
+      waitingTimeoutRef.current = null;
+    }
+
+    // Clear previous states immediately
     setFeedback(null);
-    setQuestionAudioUrl(null);
     setFeedbackAudioUrl(null);
     setExplanationAudioUrl(null);
 
-    // Set new question after a brief delay to ensure clean transition
-    setTimeout(() => {
-      setCurrentQuestion({
-        question: data.question || "No question provided",
-        id: data.questionId,
-      });
-      setCurrentQuestionNumber(data.questionNumber);
-      setTotalQuestions(data.totalQuestions);
-      setQuestionAudioUrl(data.questionAudioUrl);
-      setQuizState("active");
+    // Set new question data
+    setCurrentQuestion({
+      question: data.question || "No question provided",
+      id: data.questionId,
+    });
+    setCurrentQuestionNumber(data.questionNumber);
+    setTotalQuestions(data.totalQuestions);
+    setQuestionAudioUrl(data.questionAudioUrl);
+    setQuizState("active");
 
-      // Auto-play question audio
-      if (data.questionAudioUrl) {
-        playAudio(data.questionAudioUrl);
-      }
-    }, 100);
+    // Auto-play question audio
+    if (data.questionAudioUrl) {
+      playAudio(data.questionAudioUrl);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -484,20 +492,50 @@ export default function QuizMode() {
 
   const skipQuestion = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      // Clear any ongoing recording or processing
+      if (isRecording || isProcessing) {
+        setIsRecording(false);
+        setIsProcessing(false);
+        isRecordingRef.current = false;
+        isProcessingRef.current = false;
+        cleanupAudio();
+      }
+
+      // Send skip request
       wsRef.current.send(JSON.stringify({ action: "skip_question" }));
       toast.success("Question skipped");
+
+      // Set state to waiting for next question
+      setQuizState("waiting");
+
+      // Set timeout to prevent getting stuck in waiting state
+      waitingTimeoutRef.current = setTimeout(() => {
+        console.warn("Timeout waiting for next question after skip");
+        setQuizState("active");
+        toast.error("Failed to load next question. Please try again.");
+      }, 10000); // 10 second timeout
     }
   };
 
   const continueToNext = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      // Clear current state immediately for smooth transition
-      setCurrentQuestion(null);
+      // Clear feedback state but keep current question until new one arrives
       setFeedback(null);
-      setQuizState("active");
+      setFeedbackAudioUrl(null);
+      setExplanationAudioUrl(null);
 
       // Send next question request
       wsRef.current.send(JSON.stringify({ action: "next_question" }));
+
+      // Set state to waiting for next question
+      setQuizState("waiting");
+
+      // Set timeout to prevent getting stuck in waiting state
+      waitingTimeoutRef.current = setTimeout(() => {
+        console.warn("Timeout waiting for next question");
+        setQuizState("active");
+        toast.error("Failed to load next question. Please try again.");
+      }, 10000); // 10 second timeout
     }
   };
 
@@ -513,6 +551,10 @@ export default function QuizMode() {
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
+    }
+    if (waitingTimeoutRef.current) {
+      clearTimeout(waitingTimeoutRef.current);
+      waitingTimeoutRef.current = null;
     }
     setQuizState("setup");
     setCurrentQuestion(null);
@@ -786,6 +828,22 @@ export default function QuizMode() {
                     </CardContent>
                   </Card>
                 )}
+
+              {/* Waiting for Next Question */}
+              {quizState === "waiting" && (
+                <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-amber-50 to-orange-50">
+                  <CardContent className="p-6 text-center">
+                    <div className="mb-4">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                      </div>
+                      <p className="text-amber-700 font-medium">
+                        Loading next question...
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Recording Interface */}
               {(quizState === "active" ||
