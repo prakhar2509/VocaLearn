@@ -310,7 +310,7 @@ export default function QuizMode() {
 
       const fullUrl = audioUrl.startsWith("http")
         ? audioUrl
-        : `http://localhost:4001${audioUrl}`;
+        : `https://vocalearn-k19l.onrender.com${audioUrl}`;
       const audio = new Audio(fullUrl);
 
       audio.onended = () => {
@@ -340,7 +340,7 @@ export default function QuizMode() {
     }
 
     setQuizState("connecting");
-    const wsUrl = `ws://localhost:4001?mode=quiz&learningLanguage=${config.learningLanguage}&nativeLanguage=${config.nativeLanguage}&numberOfQuestions=${config.numberOfQuestions}&topic=${config.topic}`;
+    const wsUrl = `wss://vocalearn-k19l.onrender.com?mode=quiz&learningLanguage=${config.learningLanguage}&nativeLanguage=${config.nativeLanguage}&numberOfQuestions=${config.numberOfQuestions}&topic=${config.topic}`;
 
     console.log("Connecting to WebSocket:", wsUrl);
     wsRef.current = new WebSocket(wsUrl);

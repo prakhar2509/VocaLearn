@@ -228,7 +228,7 @@ export default function DialogueMode() {
   };
 
   const getWebSocketUrl = () => {
-    return `ws://localhost:4001?learningLanguage=${learningLanguage}&nativeLanguage=${nativeLanguage}&mode=dialogue&scenarioId=${selectedScenario}`;
+    return `wss://vocalearn-k19l.onrender.com?learningLanguage=${learningLanguage}&nativeLanguage=${nativeLanguage}&mode=dialogue&scenarioId=${selectedScenario}`;
   };
 
   const setupAudioWorklet = async () => {

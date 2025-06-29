@@ -147,7 +147,7 @@ export default function EchoMode() {
     if (!learningLanguage || !nativeLanguage) return;
 
     setConnectionStatus("connecting");
-    const wsUrl = `ws://localhost:4001?mode=echo&learningLanguage=${learningLanguage}&nativeLanguage=${nativeLanguage}`;
+    const wsUrl = `wss://vocalearn-k19l.onrender.com?mode=echo&learningLanguage=${learningLanguage}&nativeLanguage=${nativeLanguage}`;
     console.log("Connecting to WebSocket:", wsUrl);
     wsRef.current = new WebSocket(wsUrl);
     wsRef.current.binaryType = "arraybuffer";
@@ -501,7 +501,7 @@ export default function EchoMode() {
     // Use the audio URL directly if it's already a full URL, otherwise prepend server URL
     const fullUrl = audioUrl.startsWith("http")
       ? audioUrl
-      : `http://localhost:4001${audioUrl}`;
+      : `https://vocalearn-k19l.onrender.com${audioUrl}`;
     const audio = new Audio(fullUrl);
 
     audio.onended = () => {
