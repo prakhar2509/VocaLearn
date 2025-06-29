@@ -227,7 +227,7 @@ export default function EchoMode() {
 
         if (data.error) {
           console.error("❌ Server error:", data.error);
-          toast.error("Server error occurred");
+          // toast.error("Server error occurred");
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
