@@ -57,16 +57,16 @@ VocaLearn is an innovative language learning application that leverages advanced
 - **Node.js** - Server runtime
 - **WebSocket** - Real-time communication
 - **Express.js** - Web framework
-- **OpenAI GPT** - Language model for intelligent responses
-- **Azure Speech Services** - Speech-to-text recognition
+- **Groq API (llama-3.1-8b)** - Language model for intelligent responses
+- **Deepgram AI API** - Speech-to-text recognition
 - **Murf AI TTS** - Premium text-to-speech synthesis ⭐
 - **Jest** - Testing framework
 
 ### AI & Speech Technologies
 
 - **Murf AI Text-to-Speech** - High-quality, natural voice synthesis in multiple languages
-- **Azure Cognitive Services** - Speech recognition and audio processing
-- **OpenAI GPT-4** - Intelligent conversation and feedback generation
+- **Deepgram AI API** - Speech recognition and audio processing
+- **Groq API (llama-3.1-8b)*** - Intelligent conversation and feedback generation
 - **Real-time Audio Processing** - WebRTC and AudioWorklet for live speech capture
 
 ## 🎯 Murf AI Integration
