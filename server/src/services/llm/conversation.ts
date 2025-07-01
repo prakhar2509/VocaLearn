@@ -1,11 +1,10 @@
-// Conversation and response generation for different modes
+
 
 import { callLLM, LLMResponse } from "./base";
 import { getVoiceId } from "../../utils/languages";
 import { getScenarioById } from "../../utils/scenarios";
 import { getConversationContext } from "../../managers/session-manager";
 
-// Generate initial scenario greeting
 export const generateScenarioGreeting = async (
   scenarioId: string,
   learningLanguage: string,
@@ -22,13 +21,12 @@ export const generateScenarioGreeting = async (
 
   return {
     correction: startingPrompt,
-    explanation: "", // No explanation needed for initial greeting
+    explanation: "", 
     correctionVoiceId: getVoiceId(learningLanguage),
     explanationVoiceId: getVoiceId(nativeLanguage),
   };
 };
 
-// Generate conversational responses for echo and dialogue modes
 export const generateResponse = async (
   text: string,
   learningLanguage: string,
@@ -45,7 +43,7 @@ export const generateResponse = async (
     throw new Error(`Invalid Mode : ${mode}`);
   }
 
-  // Get scenario context if provided
+  
   let scenarioContext = "";
   if (scenarioId && mode === "dialogue") {
     const scenario = getScenarioById(scenarioId);
@@ -58,14 +56,14 @@ Scenario: ${scenario.title} - ${scenario.description}
     }
   }
 
-  // Build conversation history context
+
   let conversationContext = "";
   if (
     conversationHistory &&
     conversationHistory.length > 0 &&
     mode === "dialogue"
   ) {
-    // Sort by timestamp to ensure correct order
+    
     const sortedHistory = conversationHistory.sort(
       (a, b) => a.timestamp - b.timestamp
     );
@@ -73,16 +71,15 @@ Scenario: ${scenario.title} - ${scenario.description}
     conversationContext =
       "\n\nCONVERSATION HISTORY (maintain context and continuity):\n";
 
-    // Show more recent messages with more detail, older ones summarized
-    const recentMessages = sortedHistory.slice(-8); // Last 8 messages (4 exchanges)
+    
+    const recentMessages = sortedHistory.slice(-8); 
     const olderMessages = sortedHistory.slice(0, -8);
 
-    // Summarize older part if it exists
     if (olderMessages.length > 0) {
       conversationContext += `[Earlier conversation context: We discussed various topics and have been chatting naturally]\n`;
     }
 
-    // Show recent messages in detail
+    
     recentMessages.forEach((message, index) => {
       const role = message.role === "user" ? "User" : "You (AI)";
       conversationContext += `${role}: ${message.content}\n`;
@@ -261,20 +258,19 @@ FINAL REMINDER:
 
   try {
     const responseText = await callLLM(prompt);
-    console.log("🤖 LLM Raw response:", responseText);
+    console.log(" LLM Raw response:", responseText);
 
     let correction, explanation, detailedFeedback;
     try {
       const parsed = JSON.parse(responseText);
 
-      // Check if this is a quiz question generation response (has question/correctAnswer format)
+      
       if (parsed.question && parsed.correctAnswer) {
-        // For quiz question generation, return the raw JSON in the correction field
-        // so the quiz module can parse it properly
-        correction = responseText; // Return the whole JSON string
+        
+        correction = responseText; 
         explanation = "Quiz question generated";
       } else {
-        // Normal response format with correction/explanation fields
+        
         correction = parsed.correction;
         explanation = parsed.explanation;
 
@@ -323,8 +319,8 @@ FINAL REMINDER:
         }
       }
     } catch (jsonError) {
-      console.error("❌ LLM JSON parsing error:", jsonError);
-      console.error("❌ LLM Raw response:", responseText);
+      console.error(" LLM JSON parsing error:", jsonError);
+      console.error(" LLM Raw response:", responseText);
 
       // Fallback: try to extract content even if not valid JSON
       correction = responseText.includes("correction")
@@ -409,7 +405,7 @@ Always return a **valid JSON** response like this:
 
   try {
     const responseText = await callLLM(prompt);
-    console.log("🗣️ Conversation starter response:", responseText);
+    console.log(" Conversation starter response:", responseText);
 
     let correction, explanation;
     try {
@@ -418,7 +414,7 @@ Always return a **valid JSON** response like this:
       explanation = parsed.explanation;
     } catch (jsonError) {
       console.error(
-        "❌ JSON parsing error for conversation starter:",
+        " JSON parsing error for conversation starter:",
         jsonError
       );
       // Fallback

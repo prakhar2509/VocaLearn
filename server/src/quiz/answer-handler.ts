@@ -16,11 +16,11 @@ export const handleQuizAnswer = async (
     const currentQ = session.quiz.questions[session.quiz.currentQuestion];
     currentQ.userAnswer = userAnswer;
 
-    console.log(`🎯 Evaluating quiz answer: "${userAnswer}"`);
+    console.log(` Evaluating quiz answer: "${userAnswer}"`);
 
     // Handle empty/skipped answers
     if (!userAnswer || userAnswer.trim() === "") {
-      console.log("⏭️ Question was skipped or no answer provided");
+      console.log("Question was skipped or no answer provided");
       
       // Generate skipped question feedback
       const skippedFeedback = `Question skipped. The correct answer was: ${currentQ.correctAnswer}`;
@@ -61,8 +61,8 @@ export const handleQuizAnswer = async (
 
       // Check if this was the last question
       if (session.quiz.currentQuestion >= session.quiz.totalQuestions) {
-        console.log("🎯 Last question skipped - waiting for client to confirm audio completion");
-        // Don't auto-end - wait for client to send "final_audio_completed" message
+        console.log(" Last question skipped - waiting for client to confirm audio completion");
+
       }
 
       return;
@@ -160,16 +160,13 @@ export const handleQuizAnswer = async (
 
     // Check if this was the last question
     if (session.quiz.currentQuestion >= session.quiz.totalQuestions) {
-      console.log("🎯 Last question completed - waiting for client to confirm audio completion");
-      // Don't auto-end - wait for client to send "final_audio_completed" message
+      console.log(" Last question completed - waiting for client to confirm audio completion");
       // This allows the client to control when the final score is shown
     }
-
-    // Don't auto-advance - let the client control when to proceed (for non-final questions)
     // The client will send a "next_question" action when ready
 
   } catch (error) {
-    console.error("❌ Error handling quiz answer:", error);
+    console.error(" Error handling quiz answer:", error);
     ws.send(JSON.stringify({ error: "Failed to evaluate quiz answer" }));
   }
 };
@@ -183,13 +180,13 @@ export const checkForDuplicateTranscription = (
     return { isDuplicate: false };
   }
   
-  // Check if enough time has passed (10 seconds) - shorter window for technical duplicates
+  // Check if enough time has passed (10 seconds)
   const now = Date.now();
   if (session.lastTranscriptionTime && (now - session.lastTranscriptionTime) > 10000) {
     return { isDuplicate: false, reason: "Time window passed" };
   }
   
-  // Normalize both transcriptions for comparison (trim, lowercase, remove extra spaces)
+  // Normalize both transcriptions for comparison 
   const normalize = (text: string) => 
     text.trim().toLowerCase().replace(/\s+/g, ' ');
   
