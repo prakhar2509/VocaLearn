@@ -1,6 +1,3 @@
-// Main exports for the quiz module
-// This file serves as the entry point for all quiz-related functionality
-
 // Export types
 export type { QuizSession, ClientSession, DuplicateCheckResult } from './types';
 

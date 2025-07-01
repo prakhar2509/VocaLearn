@@ -1,4 +1,4 @@
-// Quiz-related interfaces and types
+
 
 export interface QuizSession {
   currentQuestion: number;
@@ -11,8 +11,8 @@ export interface QuizSession {
     userAnswer?: string;
   }>;
   isWaitingForAnswer: boolean;
-  questionHistory: string[]; // Track generated questions to avoid repeats
-  summaryGenerated?: boolean; // Flag to prevent duplicate summary generation
+  questionHistory: string[]; 
+  summaryGenerated?: boolean; 
 }
 
 export interface ClientSession {
@@ -21,10 +21,10 @@ export interface ClientSession {
   nativeLanguage: string;
   mode: string;
   quiz?: QuizSession;
-  isProcessing?: boolean; // Add flag to prevent duplicate processing
-  lastTranscription?: string; // Track last transcription to prevent duplicates
-  lastTranscriptionTime?: number; // Track when last transcription was made
-  retryCount?: number; // Track number of retries for current question/interaction
+  isProcessing?: boolean; 
+  lastTranscription?: string; 
+  lastTranscriptionTime?: number; 
+  retryCount?: number; 
 }
 
 export interface DuplicateCheckResult {

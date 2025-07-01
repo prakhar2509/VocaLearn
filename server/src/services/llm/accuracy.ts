@@ -1,8 +1,7 @@
-// Speech accuracy evaluation using LLM
+
 
 import { callLLM, AccuracyResponse } from "./base";
 
-// Calculate speech accuracy using LLM
 export const calculateAccuracy = async (
   userTranscription: string,
   expectedText: string,
@@ -47,7 +46,7 @@ Respond in JSON format:
 }`;
 
     const response = await callLLM(prompt);
-    console.log("🎯 LLM Accuracy Response:", response);
+    console.log(" LLM Accuracy Response:", response);
 
     const parsed = JSON.parse(response);
     
@@ -59,8 +58,7 @@ Respond in JSON format:
       feedback: parsed.feedback || "No feedback provided"
     };
   } catch (error) {
-    console.error("❌ Error calculating accuracy:", error);
-    // Return default values on error
+    console.error(" Error calculating accuracy:", error);
     return {
       accuracy: 50,
       pronunciationScore: 50,

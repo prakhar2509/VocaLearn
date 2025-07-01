@@ -12,7 +12,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// API routes
+
 app.get('/languages', getSupportedLanguages);
 app.post('/api/practice/start', startPracticeSession);
 
@@ -26,17 +26,15 @@ app.get('/', (req, res) => {
   });
 });
 
-// Serve test HTML files
-app.use('/test-html', express.static(path.join(__dirname, '..', 'test-html')));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// WebSocket connection handling
+
 wss.on("connection", async (ws, req) => {
   await handleConnection(ws, req);
   
-  // Timeout management
+  
   let timeoutId = setTimeout(() => {
     if (ws.readyState === WebSocket.OPEN) {
       console.log('WebSocket connection timed out');
@@ -45,10 +43,9 @@ wss.on("connection", async (ws, req) => {
     }
   }, 60000);
 
-  // Message handling
+  
   ws.on("message", async (data: Buffer) => {
     try {
-      // Reset timeout on activity
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -66,7 +63,6 @@ wss.on("connection", async (ws, req) => {
     }
   });
 
-  // Disconnection handling
   ws.on("close", () => {
     clearTimeout(timeoutId);
     handleDisconnection(ws);
