@@ -1,4 +1,4 @@
-// Dialogue scenarios configuration
+
 
 export interface DialogueScenario {
   id: string;
@@ -117,7 +117,7 @@ export const getScenarioById = (id: string): DialogueScenario | undefined => {
 export const getStartingPrompt = (scenarioId: string, language: string): string => {
   const scenario = getScenarioById(scenarioId);
   if (!scenario) {
-    return 'Hello! How are you today?'; // Default fallback
+    return 'Hello! How are you today?'; 
   }
   
   return scenario.startingPrompts[language] || scenario.startingPrompts['en-US'] || 'Hello! How are you today?';

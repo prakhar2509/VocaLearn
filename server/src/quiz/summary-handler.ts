@@ -3,7 +3,7 @@ import { getLanguageName } from "../utils/languages";
 import { ClientSession } from "./types";
 import { callLLM } from "../services/llm/base";
 
-// Interface for detailed quiz feedback
+
 interface QuizDetailedFeedback {
   pronunciationScore: number;
   grammarScore: number;
@@ -74,7 +74,7 @@ Respond in JSON format:
 
   try {
     const response = await callLLM(prompt);
-    console.log("📊 LLM Quiz Feedback Response:", response);
+    console.log(" LLM Quiz Feedback Response:", response);
     
     const parsed = JSON.parse(response);
     
@@ -92,9 +92,9 @@ Respond in JSON format:
       }
     };
   } catch (error) {
-    console.error("❌ Error generating detailed quiz feedback:", error);
+    console.error(" Error generating detailed quiz feedback:", error);
     
-    // Generate fallback feedback in native language
+    
     const fallbackFeedback = generateFallbackFeedback(nativeLanguage);
     
     return {
@@ -113,7 +113,7 @@ Respond in JSON format:
   }
 };
 
-// Generate quiz summary text in the native language
+
 const generateSummaryText = (
   score: number, 
   totalQuestions: number, 
@@ -158,36 +158,34 @@ export const sendQuizSummary = async (
     const { score, totalQuestions } = session.quiz;
     const percentage = Math.round((score / totalQuestions) * 100);
     
-    // Get language names instead of codes
+    
     const learningLanguageName = getLanguageName(session.learningLanguage);
     
-    // Generate summary text in the native language with pauses
+    
     const summaryText = generateSummaryText(score, totalQuestions, learningLanguageName, session.nativeLanguage);
 
     console.log(`🎉 Quiz completed - Score: ${score}/${totalQuestions}`);
 
-    // Ensure questions array exists
+    
     const questions = session.quiz.questions || [];
 
-    // Generate detailed feedback analysis
+    
     const detailedFeedback = await generateDetailedQuizFeedback(
       questions,
       session.learningLanguage,
       session.nativeLanguage
     );
 
-    // No audio generation for quiz summary - only text feedback
-
-    // Send comprehensive summary to client with both basic and detailed data
+    
     ws.send(JSON.stringify({
       type: "quiz_summary",
       score,
       totalQuestions,
       percentage,
       summary: summaryText,
-      // No audio for quiz summary - only text feedback
-      questions: questions, // Send all questions and answers for review
-      // Include detailed feedback in main response
+      
+      questions: questions,
+
       detailedFeedback: {
         pronunciationScore: detailedFeedback.pronunciationScore,
         grammarScore: detailedFeedback.grammarScore,
@@ -201,16 +199,16 @@ export const sendQuizSummary = async (
       }
     }));
 
-    // Reset quiz state
+    
     session.quiz = undefined;
 
   } catch (error) {
-    console.error("❌ Error sending quiz summary:", error);
+    console.error("Error sending quiz summary:", error);
     ws.send(JSON.stringify({ error: "Failed to generate quiz summary" }));
   }
 };
 
-// Generate early quiz ending text in the native language
+
 const generateEarlyEndText = (
   score: number,
   currentQuestion: number,
@@ -252,17 +250,15 @@ export const endQuizEarly = async (
   const session = sessions.get(ws);
   if (!session || !session.quiz) return;
 
-  console.log(`🛑 Quiz ended early: ${reason}`);
-  
-  // Send early termination summary
+  console.log(`Quiz ended early: ${reason}`);
+
   const { score, currentQuestion, totalQuestions } = session.quiz;
   
-  // Get language name and generate summary text in native language
   const learningLanguageName = getLanguageName(session.learningLanguage);
   const summaryText = generateEarlyEndText(score, currentQuestion, totalQuestions, reason, learningLanguageName, session.nativeLanguage);
 
   try {
-    // Generate detailed feedback for answered questions only
+
     const questions = session.quiz.questions || [];
     const answeredQuestions = questions.slice(0, currentQuestion);
     const detailedFeedback = await generateDetailedQuizFeedback(
@@ -271,9 +267,6 @@ export const endQuizEarly = async (
       session.nativeLanguage
     );
 
-    // No audio generation for early quiz end - only text feedback
-
-    // Send early end summary with detailed feedback
     ws.send(JSON.stringify({
       type: "quiz_ended_early",
       reason,
@@ -281,9 +274,7 @@ export const endQuizEarly = async (
       questionsAnswered: currentQuestion,
       totalQuestions,
       summary: summaryText,
-      // No audio for quiz summary - only text feedback
-      questions: answeredQuestions, // Only answered questions
-      // Include detailed feedback for answered questions
+      questions: answeredQuestions,
       detailedFeedback: {
         pronunciationScore: detailedFeedback.pronunciationScore,
         grammarScore: detailedFeedback.grammarScore,
@@ -297,16 +288,16 @@ export const endQuizEarly = async (
       }
     }));
 
-    // Reset quiz state
+
     session.quiz = undefined;
 
   } catch (error) {
-    console.error("❌ Error ending quiz early:", error);
+    console.error("Error ending quiz early:", error);
     ws.send(JSON.stringify({ error: "Failed to end quiz" }));
   }
 };
 
-// Helper function to generate fallback feedback in native language
+
 const generateFallbackFeedback = (nativeLanguage: string) => {
   switch (nativeLanguage) {
     case 'es-ES':

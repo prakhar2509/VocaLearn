@@ -15,7 +15,7 @@ export const generateAndSendQuizQuestion = async (
   session.retryCount = 0;
 
   try {
-    console.log(`🧪 Generating quiz question ${session.quiz.currentQuestion + 1}/${session.quiz.totalQuestions}`);
+    console.log(` Generating quiz question ${session.quiz.currentQuestion + 1}/${session.quiz.totalQuestions}`);
     
     // Generate question using LLM with special quiz prompt
     const previousQuestions = session.quiz.questionHistory.length > 0 ? 
@@ -80,16 +80,15 @@ export const generateAndSendQuizQuestion = async (
 
     // Try to parse the LLM response as JSON first
     let questionText, correctAnswer;
-    console.log("🔍 Raw LLM response correction field:", questionResponse.correction);
+    console.log("Raw LLM response correction field:", questionResponse.correction);
     try {
       const parsed = JSON.parse(questionResponse.correction);
       questionText = parsed.question;
       correctAnswer = parsed.correctAnswer;
-      console.log("✅ Parsed question JSON successfully:");
+      console.log(" Parsed question JSON successfully:");
       console.log("   Question:", questionText);
       console.log("   Answer:", correctAnswer);
     } catch (parseError) {
-      // Fallback to using correction/explanation fields
       console.log("⚠️ Could not parse question JSON, using fallback");
       console.log("   Parse error:", parseError instanceof Error ? parseError.message : String(parseError));
       console.log("   Raw correction field:", questionResponse.correction);
@@ -118,11 +117,11 @@ export const generateAndSendQuizQuestion = async (
       ws,
       questionText,
       session.learningLanguage,
-      "correction" // Reusing existing label system
+      "correction" 
     );
 
     // Send question to client
-    console.log("📤 Sending question to client:", questionText);
+    console.log(" Sending question to client:", questionText);
     ws.send(JSON.stringify({
       type: "quiz_question",
       question: questionText,
@@ -133,7 +132,7 @@ export const generateAndSendQuizQuestion = async (
 
     session.quiz.isWaitingForAnswer = true;
     
-    // Reset retry count for new question
+    
     const fullSession = sessions.get(ws);
     if (fullSession) {
       fullSession.retryCount = 0;
@@ -142,20 +141,18 @@ export const generateAndSendQuizQuestion = async (
     // Clear last transcription when starting a new question
     session.lastTranscription = undefined;
     session.lastTranscriptionTime = undefined;
-    
-    // Set timeout for question (60 seconds)
     setTimeout(() => {
       const currentSession = sessions.get(ws);
       if (currentSession?.quiz?.isWaitingForAnswer && 
           currentSession.quiz.currentQuestion === session.quiz!.currentQuestion) {
-        console.log("⏰ Question timeout - auto-advancing");
+        console.log(" Question timeout - auto-advancing");
         const { handleQuizAnswer } = require('./answer-handler');
-        handleQuizAnswer(ws, "", sessions); // Handle as timeout/empty answer
+        handleQuizAnswer(ws, "", sessions); 
       }
-    }, 60000); // 60 second timeout per question
+    }, 60000); 
     
   } catch (error) {
-    console.error("❌ Error generating quiz question:", error);
+    console.error("Error generating quiz question:", error);
     ws.send(JSON.stringify({ error: "Failed to generate quiz question" }));
   }
 };

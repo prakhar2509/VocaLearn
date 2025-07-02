@@ -1,4 +1,3 @@
-// src/murfHttp.ts
 import axios from "axios";
 import { config } from "./utils/config";
 import { WebSocket } from "ws";
@@ -40,7 +39,7 @@ export const generateAndSendTTS = async (
       throw new Error("No audio URL returned from Murf");
     }
 
-    console.log("📦 Sending audio URL to client:", audioFile);
+    console.log(" Sending audio URL to client:", audioFile);
 
     clientSocket.send(
       JSON.stringify({
@@ -52,7 +51,7 @@ export const generateAndSendTTS = async (
     );
     return audioFile;
   } catch (err: any) {
-    console.error("❌ Murf HTTP TTS failed:", err.message);
+    console.error(" Murf HTTP TTS failed:", err.message);
     clientSocket.send(JSON.stringify({ error: `TTS Error: ${err.message}` }));
     return "";
   }

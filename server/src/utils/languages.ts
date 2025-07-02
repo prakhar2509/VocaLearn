@@ -22,8 +22,7 @@ export function getSupportedLanguageCodes(): string[] {
 export function getLanguageName(languageCode: string): string {
   const lang = supportedLanguages.find((l) => l.code === languageCode);
   if (lang?.name) {
-    // Extract just the language name without the country part
-    return lang.name.split(' (')[0]; // "Hindi (India)" becomes "Hindi"
+    return lang.name.split(' (')[0]; 
   }
-  return languageCode; // fallback to code if name not found
+  return languageCode; 
 }
