@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -136,9 +136,7 @@ export default function EchoMode() {
     setIsMounted(true);
   }, []);
 
-  // WebSocket connection management - simplified approach like live-stream.html
   const connectWebSocket = useCallback(() => {
-    // Always close existing connection before creating new one
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
@@ -195,7 +193,6 @@ export default function EchoMode() {
           });
         }
 
-        // Handle the "done" signal like in live-stream.html
         if (data.type === "done" && data.done) {
           // Clear the processing timeout since we got a response
           if (processingTimeoutRef.current) {
@@ -316,7 +313,7 @@ export default function EchoMode() {
       // Create AudioContext with 16kHz sample rate
       audioContextRef.current = new AudioContext({ sampleRate: 16000 });
 
-      // Add AudioWorklet for PCM processing (simplified like live-stream.html)
+      // Add AudioWorklet for PCM processing
       await audioContextRef.current.audioWorklet.addModule(
         URL.createObjectURL(
           new Blob(
@@ -354,7 +351,7 @@ export default function EchoMode() {
         "pcm-worklet"
       );
 
-      // Handle PCM data from worklet (simplified like live-stream.html)
+      // Handle PCM data from worklet
       workletNodeRef.current.port.onmessage = (event) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(event.data);
