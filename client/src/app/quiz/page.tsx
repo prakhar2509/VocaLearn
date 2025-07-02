@@ -213,11 +213,9 @@ export default function QuizMode() {
     } else if (data.type === "transcription_failed") {
       handleTranscriptionFailed(data);
     } else if (data.error) {
-      // Only set error if it's a critical error that should be shown to user
       if (data.error.includes("Connection") || data.error.includes("Server")) {
         setError(data.error);
       }
-      // Log all errors for debugging but don't show toast
       console.error("Quiz error:", data.error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -360,7 +358,6 @@ export default function QuizMode() {
         handleQuizMessage(data);
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
-        // Don't show toast for JSON parsing errors as they can be normal during connection
       }
     };
 
@@ -368,7 +365,6 @@ export default function QuizMode() {
       console.error("❌ WebSocket error:", error);
       setQuizState("error");
       setError("Connection failed. Please check if the server is running.");
-      // Only show toast for critical connection errors
       toast.error("Connection failed. Please check server status.");
     };
 

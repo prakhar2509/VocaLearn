@@ -80,7 +80,7 @@ export default function HeroSection({
 
             <div className="flex gap-8 mt-6 lg:justify-start justify-center">
               <div className="text-left">
-                <div className="text-3xl font-bold text-gray-900">50+</div>
+                <div className="text-3xl font-bold text-gray-900">9+</div>
                 <div className="text-gray-600 text-sm">Languages</div>
               </div>
               <div className="text-left">
