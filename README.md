@@ -107,7 +107,7 @@ All modes support Murf AI's premium voices in:
 
 ## 🌐 Live Application
 
-**Experience VocaLearn Now**: https://vocallearn.vercel.app
+**Experience VocaLearn Now**: https://voca-learn.vercel.app
 
 ## 📱 Usage Guide
 
